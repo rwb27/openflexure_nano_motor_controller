@@ -294,15 +294,17 @@ class QueriedProperty(object):
     doc: the docstring
     response_string: supply a % code (as you would for response_string in a
         ``BasicSerialInstrument.parsed_query``)
+    ack_writes: set to "readline" to discard a line of input after writing.
     """
     def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
-                 fdel=None, doc=None, response_string=None):
+                 fdel=None, doc=None, response_string=None, ack_writes="no"):
         self.response_string = response_string
         self.get_cmd = get_cmd
         self.set_cmd = set_cmd
         self.validate = validate
         self.valrange = valrange
         self.fdel = fdel
+        self.ack_writes = ack_writes
         self.__doc__ = doc
         
 
@@ -342,6 +344,8 @@ class QueriedProperty(object):
         elif '%' in message:
             message = message % value
         obj.write(message)
+        if self.ack_writes == "readline":
+            obj.readline()
 
     def __delete__(self, obj):
         if self.fdel is None:
