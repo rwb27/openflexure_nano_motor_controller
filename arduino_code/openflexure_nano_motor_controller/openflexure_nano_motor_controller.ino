@@ -17,8 +17,10 @@
 
 // The array below has 3 stepper objects, for X,Y,Z respectively
 const int n_motors = 3;
-long min_step_delay = 1000;
-long ramp_time = -1;
+long min_step_delay;
+const int min_step_delay_eeprom = sizeof(long)*n_motors;
+long ramp_time;
+const int ramp_time_eeprom = sizeof(long)*(n_motors+1);
 Stepper* motors[n_motors];
 signed long current_pos[n_motors];
 int steps_remaining[n_motors];
@@ -54,6 +56,13 @@ void setup() {
     EEPROM.get(sizeof(long)*i, current_pos[i]); //read last saved position from EEPROM
     //current_pos[i] = 0; //alternatively, reset on power cycle!
   }
+
+  EEPROM.get(min_step_delay_eeprom, min_step_delay);
+  if(min_step_delay < 0){ // -1 seems to be what we get if it's uninitialised.
+    min_step_delay = 1000;
+    EEPROM.put(min_step_delay_eeprom, min_step_delay); 
+  }
+  EEPROM.get(ramp_time_eeprom, ramp_time);
 }
 
 void stepMotor(int motor, int dx){
@@ -185,6 +194,7 @@ void loop() {
       int preceding_space = command.indexOf(' ',0);
       if(preceding_space <= 0) Serial.println("Bad command.");
       ramp_time = command.substring(preceding_space+1).toInt();
+      EEPROM.put(ramp_time_eeprom, ramp_time);
       return;
     }
     if(command.startsWith("ramp_time?")){
@@ -196,6 +206,7 @@ void loop() {
       int preceding_space = command.indexOf(' ',0);
       if(preceding_space <= 0) Serial.println("Bad command.");
       min_step_delay = command.substring(preceding_space+1).toInt();
+      EEPROM.put(min_step_delay_eeprom, min_step_delay);
       return;
     }
     if(command.startsWith("min_step_delay?") || command.startsWith("dt?")){
