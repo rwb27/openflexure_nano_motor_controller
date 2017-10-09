@@ -192,9 +192,13 @@ void loop() {
     }
     if(command.startsWith("ramp_time ")){
       int preceding_space = command.indexOf(' ',0);
-      if(preceding_space <= 0) Serial.println("Bad command.");
+      if(preceding_space <= 0){
+        Serial.println("Bad command.");
+        return;
+      }
       ramp_time = command.substring(preceding_space+1).toInt();
       EEPROM.put(ramp_time_eeprom, ramp_time);
+      Serial.println("done.");
       return;
     }
     if(command.startsWith("ramp_time?")){
@@ -204,9 +208,13 @@ void loop() {
     }
     if(command.startsWith("min_step_delay ") || command.startsWith("dt ")){
       int preceding_space = command.indexOf(' ',0);
-      if(preceding_space <= 0) Serial.println("Bad command.");
+      if(preceding_space <= 0){
+        Serial.println("Bad command.");
+        return;
+      }
       min_step_delay = command.substring(preceding_space+1).toInt();
       EEPROM.put(min_step_delay_eeprom, min_step_delay);
+      Serial.println("done.");
       return;
     }
     if(command.startsWith("min_step_delay?") || command.startsWith("dt?")){
