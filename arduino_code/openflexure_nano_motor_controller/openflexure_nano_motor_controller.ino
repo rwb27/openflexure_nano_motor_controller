@@ -177,7 +177,7 @@ void setup_light_sensor(){
 
 void print_light_sensor_gain(){
   // Print the current gain value of the light sensor
-  Serial.print  (F("Gain: "));
+  Serial.print  (F("light sensor gain: "));
   tsl2591Gain_t gain = tsl.getGain();
   switch(gain)
   {
@@ -220,7 +220,7 @@ void set_light_sensor_gain(int newgain){
 
 void print_light_sensor_integration_time(){
   // Print the current integration time in milliseconds.
-  Serial.print  (F("Timing:       "));
+  Serial.print  (F("light sensor integration time: "));
   Serial.print((tsl.getTiming() + 1) * 100, DEC); 
   Serial.println(F(" ms"));
 }
