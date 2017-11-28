@@ -13,6 +13,14 @@
 #include <assert.h>
 #include <EEPROM.h>
 
+//#define ADAFRUIT_TSL2591_SUPPORT
+
+#ifdef ADAFRUIT_TSL2591_SUPPORT
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include "Adafruit_TSL2591.h"
+#endif
+
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
 
 // The array below has 3 stepper objects, for X,Y,Z respectively
@@ -63,6 +71,14 @@ void setup() {
     EEPROM.put(min_step_delay_eeprom, min_step_delay); 
   }
   EEPROM.get(ramp_time_eeprom, ramp_time);
+  if(ramp_time < 0){ // -1 seems to be what we get if it's uninitialised.
+    ramp_time = 0;
+    EEPROM.put(ramp_time_eeprom, ramp_time); 
+  }
+  #ifdef ADAFRUIT_TSL2591_SUPPORT
+  setup_light_sensor();
+  #endif
+  
 }
 
 void stepMotor(int motor, int dx){
@@ -143,6 +159,79 @@ void move_axes(int displacement[n_motors]){
     EEPROM.put(0, current_pos);
 }
 
+#ifdef ADAFRUIT_TSL2591_SUPPORT
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
+
+void setup_light_sensor(){
+  if (tsl.begin()) 
+  {
+    Serial.println(F("Found a TSL2591 sensor"));
+    tsl.setGain(TSL2591_GAIN_MED);
+    tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
+  } 
+  else 
+  {
+    Serial.println(F("No light sensor found.  NB your board will start up faster if you recompile without light sensor support."));
+  }
+}
+
+void print_light_sensor_gain(){
+  // Print the current gain value of the light sensor
+  Serial.print  (F("light sensor gain "));
+  tsl2591Gain_t gain = tsl.getGain();
+  switch(gain)
+  {
+    case TSL2591_GAIN_LOW:
+      Serial.println(F("1x (Low)"));
+      break;
+    case TSL2591_GAIN_MED:
+      Serial.println(F("25x (Medium)"));
+      break;
+    case TSL2591_GAIN_HIGH:
+      Serial.println(F("428x (High)"));
+      break;
+    case TSL2591_GAIN_MAX:
+      Serial.println(F("9876x (Max)"));
+      break;
+  }
+}
+
+void set_light_sensor_gain(int newgain){
+  // Set the current gain value of the light sensor, and print a confirmation.
+  switch(newgain){
+    case 1:
+      tsl.setGain(TSL2591_GAIN_LOW);
+      break;
+    case 25:
+      tsl.setGain(TSL2591_GAIN_MED);
+      break;
+    case 428:
+      tsl.setGain(TSL2591_GAIN_HIGH);
+      break;
+    case 9876:
+      tsl.setGain(TSL2591_GAIN_MAX);
+      break;
+    default:
+      Serial.println(F("Error: gain may only be 1, 25, 428, or 9876."));
+      return;
+  }
+  print_light_sensor_gain();
+}
+
+void print_light_sensor_integration_time(){
+  // Print the current integration time in milliseconds.
+  Serial.print  (F("light sensor integration time "));
+  Serial.print((tsl.getTiming() + 1) * 100, DEC); 
+  Serial.println(F(" ms"));
+}
+
+void print_light_sensor_fullspectrum(){
+  // Print the current light value
+  uint16_t x = tsl.getLuminosity(TSL2591_FULLSPECTRUM);
+  Serial.println(x, DEC);
+}
+
+#endif
 
 void loop() {
   // wait for a serial command and read it
@@ -171,7 +260,7 @@ void loop() {
       EACH_MOTOR{ //read three integers and store in steps_remaining
         preceding_space = command.indexOf(' ',preceding_space+1);
         if(preceding_space<0){
-          Serial.println("Error: command is mr <int> <int> <int>");
+          Serial.println(F("Error: command is mr <int> <int> <int>"));
           break;
         }
         displacement[i] = command.substring(preceding_space+1).toInt();
@@ -192,9 +281,13 @@ void loop() {
     }
     if(command.startsWith("ramp_time ")){
       int preceding_space = command.indexOf(' ',0);
-      if(preceding_space <= 0) Serial.println("Bad command.");
+      if(preceding_space <= 0){
+        Serial.println("Bad command.");
+        return;
+      }
       ramp_time = command.substring(preceding_space+1).toInt();
       EEPROM.put(ramp_time_eeprom, ramp_time);
+      Serial.println("done.");
       return;
     }
     if(command.startsWith("ramp_time?")){
@@ -204,9 +297,13 @@ void loop() {
     }
     if(command.startsWith("min_step_delay ") || command.startsWith("dt ")){
       int preceding_space = command.indexOf(' ',0);
-      if(preceding_space <= 0) Serial.println("Bad command.");
+      if(preceding_space <= 0){
+        Serial.println("Bad command.");
+        return;
+      }
       min_step_delay = command.substring(preceding_space+1).toInt();
       EEPROM.put(min_step_delay_eeprom, min_step_delay);
+      Serial.println("done.");
       return;
     }
     if(command.startsWith("min_step_delay?") || command.startsWith("dt?")){
@@ -220,24 +317,54 @@ void loop() {
       EEPROM.put(0, current_pos);
       return;
     }
-    if(command.startsWith("help")){
-      Serial.println("OpenFlexure Motor Controller firmware v0.1");
-      Serial.println("Commands (terminated by a newline character):");
-      Serial.println("mrx ??? - relative move in x");
-      Serial.println("mrx ??? - relative move in x");
-      Serial.println("mrx ??? - relative move in x");
-      Serial.println("mr ??? ??? ??? - relative move in all 3 axes");
-      Serial.println("release - de-energise all motors");
-      Serial.println("p? - print position (3 space-separated integers");
-      Serial.println("ramp_time ??? - set the time taken to accelerate/decelerate in us");
-      Serial.println("min_step_delay ??? - set the minimum time between steps in us.");
-      Serial.println("dt ??? - set the minimum time between steps in us.");
-      Serial.println("ramp_time? - get the time taken to accelerate/decelerate in us");
-      Serial.println("min_step_delay? - get the minimum time between steps in us.");
-      Serial.println("zero - set the current position to zero.");
-      Serial.println("??? means a decimal integer.");
+    #ifdef ADAFRUIT_TSL2591_SUPPORT
+    if(command.startsWith("light_sensor_gain?")){
+      print_light_sensor_gain();
+      return;
     }
-    Serial.println("Type help for a list of commands.");
+    if(command.startsWith("light_sensor_gain ")){
+      int preceding_space = command.indexOf(' ',0);
+      if(preceding_space <= 0){
+        Serial.println("Bad command.");
+        return;
+      }
+      set_light_sensor_gain(command.substring(preceding_space+1).toInt());
+      return;
+    }
+    if(command.startsWith("light_sensor_integration_time?")){
+      print_light_sensor_integration_time();
+      return;
+    }
+    if(command.startsWith("light_sensor_fullspectrum?")){
+      print_light_sensor_fullspectrum();
+      return;
+    }
+    #endif
+    if(command.startsWith("help")){
+      Serial.println(F("OpenFlexure Motor Controller firmware v0.1"));
+      Serial.println(F("Commands (terminated by a newline character):"));
+      Serial.println(F("mrx ??? - relative move in x"));
+      Serial.println(F("mrx ??? - relative move in x"));
+      Serial.println(F("mrx ??? - relative move in x"));
+      Serial.println(F("mr ??? ??? ??? - relative move in all 3 axes"));
+      Serial.println(F("release - de-energise all motors"));
+      Serial.println(F("p? - print position (3 space-separated integers"));
+      Serial.println(F("ramp_time ??? - set the time taken to accelerate/decelerate in us"));
+      Serial.println(F("min_step_delay ??? - set the minimum time between steps in us."));
+      Serial.println(F("dt ??? - set the minimum time between steps in us."));
+      Serial.println(F("ramp_time? - get the time taken to accelerate/decelerate in us"));
+      Serial.println(F("min_step_delay? - get the minimum time between steps in us."));
+      Serial.println(F("zero - set the current position to zero."));
+      #ifdef ADAFRUIT_TSL2591_SUPPORT
+      Serial.println(F("light_sensor_gain ??? - set the gain of the light sensor"));
+      Serial.println(F("light_sensor_gain? - get the gain of the light sensor"));
+      Serial.println(F("light_sensor_integration_time? - get the integration time in milliseconds"));
+      Serial.println(F("light_sensor_fullspectrum? - read the current value from the full spectrum diode"));
+      #endif
+      Serial.println("");
+      Serial.println(F("??? means a decimal integer."));
+    }
+    Serial.println(F("Type 'help' for a list of commands."));
   }else{
     delay(1);
     return;
