@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <EEPROM.h>
 
-#define ADAFRUIT_TSL2591_SUPPORT
+//#define ADAFRUIT_TSL2591_SUPPORT
 
 #ifdef ADAFRUIT_TSL2591_SUPPORT
 #include <Wire.h>
@@ -355,14 +355,16 @@ void loop() {
       Serial.println(F("ramp_time? - get the time taken to accelerate/decelerate in us"));
       Serial.println(F("min_step_delay? - get the minimum time between steps in us."));
       Serial.println(F("zero - set the current position to zero."));
+      #ifdef ADAFRUIT_TSL2591_SUPPORT
       Serial.println(F("light_sensor_gain ??? - set the gain of the light sensor"));
       Serial.println(F("light_sensor_gain? - get the gain of the light sensor"));
       Serial.println(F("light_sensor_integration_time? - get the integration time in milliseconds"));
       Serial.println(F("light_sensor_fullspectrum? - read the current value from the full spectrum diode"));
+      #endif
       Serial.println("");
       Serial.println(F("??? means a decimal integer."));
     }
-    Serial.println(F("Type help for a list of commands."));
+    Serial.println(F("Type 'help' for a list of commands."));
   }else{
     delay(1);
     return;
