@@ -1,11 +1,12 @@
 /*
  * OpenFlexure Microscope motor controoler
  * Adapted from James Sharkey's Arduino-powered stepper driver
+ * Substantially rewritten Richard Bowman, Spring 2017
  * Written by James Sharkey, Spring 2015
  * Based on code written by Richard Bowman, Autumn 2014
+ * Based on code written by Fergus Riche, 2015
  * For use with the 3D printed microscope:
- * http://www.docubricks.com/projects/openflexure-microscope
- * http://dx.doi.org/10.1063/1.4941068
+ * https://github.com/rwb27/openflexure_microscope/
  * 
  * (c) Richard Bowman & James Sharkey, Released under GPL v3, 2017
  */
