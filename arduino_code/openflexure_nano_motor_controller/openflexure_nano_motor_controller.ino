@@ -13,8 +13,10 @@
 #include <assert.h>
 #include <EEPROM.h>
 
+// LIGHT SENSOR SUPPORT
+// Uncomment (exactly) one of the lines below to enable support for that sensor.
 //#define ADAFRUIT_TSL2591
-#define ADAFRUIT_ADS1115
+//#define ADAFRUIT_ADS1115
 
 #ifdef ADAFRUIT_TSL2591
 #include <Wire.h>
