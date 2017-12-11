@@ -13,12 +13,19 @@
 #include <assert.h>
 #include <EEPROM.h>
 
-//#define ADAFRUIT_TSL2591_SUPPORT
+//#define ADAFRUIT_TSL2591
+#define ADAFRUIT_ADS1115
 
-#ifdef ADAFRUIT_TSL2591_SUPPORT
+#ifdef ADAFRUIT_TSL2591
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include "Adafruit_TSL2591.h"
+#define LIGHT_SENSOR
+#endif
+#ifdef ADAFRUIT_ADS1115
+#include <Wire.h>
+#include "Adafruit_ADS1015.h"
+#define LIGHT_SENSOR
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
@@ -75,9 +82,9 @@ void setup() {
     ramp_time = 0;
     EEPROM.put(ramp_time_eeprom, ramp_time); 
   }
-  #ifdef ADAFRUIT_TSL2591_SUPPORT
+  #ifdef LIGHT_SENSOR
   setup_light_sensor();
-  #endif
+  #endif /* LIGHT_SENSOR */
   
 }
 
@@ -159,13 +166,12 @@ void move_axes(int displacement[n_motors]){
     EEPROM.put(0, current_pos);
 }
 
-#ifdef ADAFRUIT_TSL2591_SUPPORT
+#ifdef ADAFRUIT_TSL2591
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
 
 void setup_light_sensor(){
   if (tsl.begin()) 
   {
-    Serial.println(F("Found a TSL2591 sensor"));
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
   } 
@@ -194,6 +200,10 @@ void print_light_sensor_gain(){
       Serial.println(F("9876x (Max)"));
       break;
   }
+}
+void print_light_sensor_gain_values(){
+  // Print the allowable gain values of the light sensor
+  Serial.println(F("light sensor gains: 1x, 25x, 428x, 9876x"));
 }
 
 void set_light_sensor_gain(int newgain){
@@ -225,13 +235,93 @@ void print_light_sensor_integration_time(){
   Serial.println(F(" ms"));
 }
 
-void print_light_sensor_fullspectrum(){
+void print_light_sensor_intensity(){
   // Print the current light value
   uint16_t x = tsl.getLuminosity(TSL2591_FULLSPECTRUM);
   Serial.println(x, DEC);
 }
+#endif // ADAFRUIT_TSL2591
 
-#endif
+
+#ifdef ADAFRUIT_ADS1115
+Adafruit_ADS1115 ads; // pass in a number for the sensor identifier (for your use later)
+
+void setup_light_sensor(){
+  ads.begin();
+  ads.setGain(GAIN_ONE);
+}
+
+void print_light_sensor_gain(){
+  // Print the current gain value of the light sensor
+  Serial.print  (F("light sensor gain "));
+  adsGain_t gain = ads.getGain();
+  switch(gain)
+  {
+    case GAIN_TWOTHIRDS:
+      Serial.println(F("0.66x (specify 0)"));
+      break;
+    case GAIN_ONE:
+      Serial.println(F("1x"));
+      break;
+    case GAIN_TWO:
+      Serial.println(F("2x"));
+      break;
+    case GAIN_FOUR:
+      Serial.println(F("4x"));
+      break;
+    case GAIN_EIGHT:
+      Serial.println(F("8x"));
+      break;
+    case GAIN_SIXTEEN:
+      Serial.println(F("16x"));
+      break;
+  }
+}
+void print_light_sensor_gain_values(){
+  // Print the allowable gain values of the light sensor
+  Serial.println(F("light sensor gains: 0.66x, 1x, 2x, 4x, 8x, 16x"));
+}
+
+void set_light_sensor_gain(int newgain){
+  // Set the current gain value of the light sensor, and print a confirmation.
+  switch(newgain){
+    case 0:
+      ads.setGain(GAIN_TWOTHIRDS);
+      break;
+    case 1:
+      ads.setGain(GAIN_ONE);
+      break;
+    case 2:
+      ads.setGain(GAIN_TWO);
+      break;
+    case 4:
+      ads.setGain(GAIN_FOUR);
+      break;
+    case 8:
+      ads.setGain(GAIN_EIGHT);
+      break;
+    case 16:
+      ads.setGain(GAIN_SIXTEEN);
+      break;
+    default:
+      Serial.println(F("Error: gain may only be 0, 1, 2, 4, 8, 16 (0 means 2/3)."));
+      return;
+  }
+  print_light_sensor_gain();
+}
+
+void print_light_sensor_integration_time(){
+  // Print the current integration time in milliseconds.
+  Serial.println(F("integration time not supported for ADS1115"));
+}
+
+void print_light_sensor_intensity(){
+  // Print the current light value
+  uint16_t x = ads.readADC_SingleEnded(0);
+  Serial.println(x, DEC);
+}
+
+#endif // ADAFRUIT_ADS1115
 
 void loop() {
   // wait for a serial command and read it
@@ -317,9 +407,13 @@ void loop() {
       EEPROM.put(0, current_pos);
       return;
     }
-    #ifdef ADAFRUIT_TSL2591_SUPPORT
+    #ifdef LIGHT_SENSOR
     if(command.startsWith("light_sensor_gain?")){
       print_light_sensor_gain();
+      return;
+    }
+    if(command.startsWith("light_sensor_gain_values?")){
+      print_light_sensor_gain_values();
       return;
     }
     if(command.startsWith("light_sensor_gain ")){
@@ -335,11 +429,11 @@ void loop() {
       print_light_sensor_integration_time();
       return;
     }
-    if(command.startsWith("light_sensor_fullspectrum?")){
-      print_light_sensor_fullspectrum();
+    if(command.startsWith("light_sensor_intensity?")){
+      print_light_sensor_intensity();
       return;
     }
-    #endif
+    #endif //LIGHT_SENSOR
     if(command.startsWith("help")){
       Serial.println(F("OpenFlexure Motor Controller firmware v0.1"));
       Serial.println(F("Commands (terminated by a newline character):"));
@@ -355,12 +449,18 @@ void loop() {
       Serial.println(F("ramp_time? - get the time taken to accelerate/decelerate in us"));
       Serial.println(F("min_step_delay? - get the minimum time between steps in us."));
       Serial.println(F("zero - set the current position to zero."));
-      #ifdef ADAFRUIT_TSL2591_SUPPORT
+      #ifdef LIGHT_SENSOR
+      #if defined ADAFRUIT_TSL2591
+      Serial.println(F("Compiled with Adafruit TSL2591 support"));
+      #elif defined ADAFRUIT_ADS1115
+      Serial.println(F("Compiled with Adafruit ADS1115 support"));
+      #endif
       Serial.println(F("light_sensor_gain ??? - set the gain of the light sensor"));
       Serial.println(F("light_sensor_gain? - get the gain of the light sensor"));
+      Serial.println(F("light_sensor_gain_values? - get the allowable gain values of the light sensor"));
       Serial.println(F("light_sensor_integration_time? - get the integration time in milliseconds"));
-      Serial.println(F("light_sensor_fullspectrum? - read the current value from the full spectrum diode"));
-      #endif
+      Serial.println(F("light_sensor_intensity? - read the current value from the full spectrum diode"));
+      #endif //LIGHT_SENSOR
       Serial.println("");
       Serial.println(F("??? means a decimal integer."));
     }
