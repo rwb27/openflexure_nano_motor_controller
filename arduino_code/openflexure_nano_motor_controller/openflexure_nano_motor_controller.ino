@@ -61,7 +61,6 @@ int command_prefix(String command, const char ** prefixes, int n_prefixes){
 void setup() {
   // initialise serial port
   Serial.begin(115200);
-  Serial.println("OpenFlexure Motor Board v0.3");
   
   // get the stepoper objects from the motor shield objects
   motors[0] = new Stepper(8, 13, 12, 11, 10);
@@ -87,6 +86,8 @@ void setup() {
   }
   #ifdef LIGHT_SENSOR
   setup_light_sensor();
+  #else
+  Serial.println(F("OpenFlexure Motor Board v0.3"));
   #endif /* LIGHT_SENSOR */
   
 }
@@ -177,6 +178,7 @@ void setup_light_sensor(){
   {
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
+    Serial.println(F("OpenFlexure Motor Board (with TSL2591 support)"));
   } 
   else 
   {
@@ -252,6 +254,7 @@ Adafruit_ADS1115 ads; // pass in a number for the sensor identifier (for your us
 void setup_light_sensor(){
   ads.begin();
   ads.setGain(GAIN_ONE);
+  Serial.println(F("OpenFlexure Motor Board (with ADS1115 support)"));
 }
 
 void print_light_sensor_gain(){
@@ -320,7 +323,8 @@ void print_light_sensor_integration_time(){
 
 void print_light_sensor_intensity(){
   // Print the current light value
-  uint16_t x = ads.readADC_SingleEnded(0);
+  // uint16_t x = ads.readADC_SingleEnded(0); //single ended measurement on pin 0
+  uint16_t x = ads.readADC_Differential_0_1(); //differential measurement on pins 0,1
   Serial.println(x, DEC);
 }
 
