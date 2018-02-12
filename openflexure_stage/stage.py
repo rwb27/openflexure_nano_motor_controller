@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jun 18 21:06:04 2017
+OpenFlexure Stage module
 
-@author: richa
+This Python code deals with the computer (Raspberry Pi) side of communicating
+with the OpenFlexure Motor Controller.
+
+It is (c) Richard Bowman 2017 and released under GNU GPL v3
 """
-
+from __future__ import print_function, division
 import time
 from basic_serial_instrument import BasicSerialInstrument, QueriedProperty, EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import numpy as np
@@ -71,7 +74,8 @@ class OpenFlexureStage(BasicSerialInstrument):
         # For each axis where we're moving in the *opposite*
         # direction to self.backlash, we deliberately overshoot:
         initial_move -= np.where(self.backlash*displacement < 0,
-                                 self.backlash, np.zeros(self.n_axes, dtype=np.int))
+                                 self.backlash, 
+                                 np.zeros(self.n_axes, dtype=self.backlash.dtype))
         self._move_rel_nobacklash(initial_move)
         if np.any(displacement - initial_move != 0):
             # If backlash correction has kicked in and made us overshoot, move
@@ -95,7 +99,13 @@ class OpenFlexureStage(BasicSerialInstrument):
         self.query("release")
 
     def move_abs(self, final, **kwargs):
-        new_position = final#h.verify_vector(final)
+        """Make an absolute move to a position
+        
+        NB the stage only accepts relative move commands, so this first
+        queries the stage for its position, then instructs it to make about
+        relative move.
+        """
+        new_position = final
         rel_mov = np.subtract(new_position, self.position)
         return self.move_rel(rel_mov, **kwargs)
 
@@ -114,40 +124,51 @@ class OpenFlexureStage(BasicSerialInstrument):
         need to worry about that here.
         """
         if type is not None:
-            print "An exception occurred inside a with block, resetting "
-            "position to its value at the start of the with block"
-            self.move_abs(self._position_on_enter)
+            print("An exception occurred inside a with block, resetting " +
+                  "position to its value at the start of the with block")
+            try:
+                time.sleep(0.5)
+                self.move_abs(self._position_on_enter)
+            except Exception as e:
+                print("A further exception occurred when resetting position: {}".format(e))
+            print("Move completed, raising exception...")
+            raise value #propagate the exception
+                
+    def query(self, message, *args, **kwargs):
+        """Send a message and read the response.  See BasicSerialInstrument.query()"""
+        time.sleep(0.001) # This is to protect the stage from us talking too fast!
+        return BasicSerialInstrument.query(self, message, *args, **kwargs)
         
 
 if __name__ == "__main__":
     s = OpenFlexureStage('COM3')
     time.sleep(1)
-    #print s.query("mrx 1000")
+    #print(s.query("mrx 1000"))
     #time.sleep(1)
-    #print s.query("mrx -1000")
+    #print(s.query("mrx -1000"))
 
     #first, try a bunch of single-axis moves with and without acceleration
     for rt in [-1, 500000]:
         s.ramp_time = rt
         for axis in ['x', 'y', 'z']:
             for move in [-512, 512, 1024, -1024]:
-                print "moving {} by {}".format(axis, move)
+                print("moving {} by {}".format(axis, move))
                 qs = "mr{} {}".format(axis, move)
-                print qs + ": " + s.query(str(qs))
-                print "Position: {}".format(s.position)
+                print(qs + ": " + s.query(str(qs)))
+                print("Position: {}".format(s.position))
 
     time.sleep(0.5)
     for i in range(10):
-        print s.position
+        print(s.position)
     #next, describe a circle with the X and Y motors.  This is a harder test!
     radius = 1024;
-    #print "Setting ramp time: <"+s.query("ramp_time -1")+">" #disable acceleration
-    #print "Extra Line: <"+s.readline()+">"
+    #print("Setting ramp time: <"+s.query("ramp_time -1")+">") #disable acceleration
+    #print("Extra Line: <"+s.readline()+">")
     s.ramp_time = -1
     for a in np.linspace(0, 2*np.pi, 50):
-        print "moving to angle {}".format(a)
+        print("moving to angle {}".format(a))
         oldpos = np.array(s.position)
-        print "Position: {}".format(oldpos)
+        print("Position: {}".format(oldpos))
         newpos = np.array([np.cos(a), np.sin(a), 0]) * radius
         displacement = newpos - oldpos
         s.move_rel(list(displacement))
