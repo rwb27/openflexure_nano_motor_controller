@@ -112,6 +112,45 @@ class OpenFlexureStage(BasicSerialInstrument):
     def focus_rel(self, z):
         """Move the stage in the Z direction by z micro steps."""
         self.move_rel([0, 0, z])
+	
+    def scan_linear(self, rel_positions, backlash=True, return_to_start=True):
+        """Scan through a list of (relative) positions (generator fn)
+        
+        rel_positions should be an nx3-element array (or list of 3 element arrays).  
+        Positions should be relative to the starting position - not a list of relative moves.
+
+        backlash argument is passed to move_rel
+        
+        if return_to_start is True (default) we return to the starting position after a
+        successful scan.  NB we always attempt to return to the starting position if an
+        exception occurs during the scan..
+        """
+        starting_position = self.position
+        rel_positions = np.array(rel_positions)
+        assert rel_positions.shape[1] == 3, ValueError("Positions should be 3 elements long.")
+        try:
+            self.move_rel(rel_positions[0], backlash=backlash)
+            yield 0
+
+            for i, step in enumerate(np.diff(rel_positions, axis=0)):
+                self.move_rel(step, backlash=backlash)
+                yield i+1
+        except Exception as e:
+            return_to_start = True # always return to start if it went wrong.
+            raise e
+        finally:
+            if return_to_start:
+                self.move_abs(starting_position, backlash=backlash)
+
+    def scan_z(self, dz, **kwargs):
+        """Scan through a list of (relative) z positions (generator fn)
+        
+        This function takes a 1D numpy array of Z positions, relative to
+        the position at the start of the scan, and converts it into an
+        array of 3D positions with x=y=0.  This, along with all the
+        keyword arguments, is then passed to ``scan_linear``.
+        """
+        return self.scan_linear([[0,0,z] for z in dz], **kwargs)
 
     def __enter__(self):
         """When we use this in a with statement, remember where we started."""
