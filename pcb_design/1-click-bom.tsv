@@ -1,0 +1,5 @@
+References	Qty	Description	Manufacturer	MPN	Manufacturer	MPN	Manufacturer	MPN	Manufacturer	MPN	Manufacturer	MPN	Digikey	Mouser	RS	Newark	Farnell
+U1, U2	2	ULN2003 DIP	STMicroelectronics	ULN2003A	Texas Instruments	ULN2003AIN	Texas Instruments	ULN2003AN	STMicroelectronics	E-ULN2003A	Toshiba	ULN2003AP	497-2344-5-ND	511ULN2003A	6868209	89K1130	1094421
+R1	1	Resistor 1k through-hole	Yageo	MFR-25FBF52-1K	TE Connectivity	CFR200J1K0 							1.00KXBK-ND	603MFR25FBF521K	1251137	23X5713	2329571
+LED1	1	led red 5mm	Vishay	TLHK5100									751-1118-ND	78TLHK5100	8187580P	33C1301	1328315
+C1	1	Capacitor 1000uF 12V 6mm															
