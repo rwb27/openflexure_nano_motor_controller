@@ -41,7 +41,7 @@ long ramp_time;
 const int ramp_time_eeprom = sizeof(long)*(n_motors+1);
 Stepper* motors[n_motors];
 signed long current_pos[n_motors];
-int steps_remaining[n_motors];
+long steps_remaining[n_motors];
 
 // We'll use this input buffer for serial comms
 const int INPUT_BUFFER_LENGTH = 64;
@@ -92,7 +92,7 @@ void setup() {
   
 }
 
-void stepMotor(int motor, int dx){
+void stepMotor(int motor, long dx){
   //make a single step of a single motor.  
   current_pos[motor] += dx;
   motors[motor]->stepMotor(((current_pos[motor] % 8) + 8) % 8); //forgive the double-modulo; I need 0-7 even for -ve numbers
@@ -111,11 +111,11 @@ void print_position(){
   Serial.println();
 }
 
-void move_axes(int displacement[n_motors]){
+void move_axes(long displacement[n_motors]){
   // move all the axes in a nice move
   // split displacements into magnitude and direction, and find max. travel
-    int max_steps = 0;
-    int dir[n_motors];
+    long max_steps = 0;
+    long dir[n_motors];
     EACH_MOTOR{
       dir[i] = displacement[i] > 0 ? 1 : -1;
       displacement [i] *= dir[i];
@@ -131,7 +131,7 @@ void move_axes(int displacement[n_motors]){
     }
     // actually make the move
     bool finished = false;
-    int distance_moved[n_motors];
+    long distance_moved[n_motors];
     EACH_MOTOR distance_moved[i] = 0;
     float start = (float) micros();
     float final_scaled_t = (float) max_steps * min_step_delay; //NB total time taken will be final_scaled_t + 2*ramp_time
@@ -343,8 +343,8 @@ void loop() {
     if(axis >= 0){
       int preceding_space = command.indexOf(' ',0);
       if(preceding_space <= 0) Serial.println("Bad command.");
-      int n_steps = command.substring(preceding_space+1).toInt();
-      int displacement[n_motors];
+      long n_steps = command.substring(preceding_space+1).toInt();
+      long displacement[n_motors];
       EACH_MOTOR displacement[i]=0;
       displacement[axis]=n_steps;
       move_axes(displacement);
@@ -353,7 +353,7 @@ void loop() {
     }
     if(command.startsWith("move_rel ") or command.startsWith("mr ")){ //relative move
       int preceding_space = -1;
-      int displacement[n_motors];
+      long displacement[n_motors];
       EACH_MOTOR{ //read three integers and store in steps_remaining
         preceding_space = command.indexOf(' ',preceding_space+1);
         if(preceding_space<0){
