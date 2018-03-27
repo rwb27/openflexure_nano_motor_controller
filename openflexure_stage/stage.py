@@ -22,10 +22,12 @@ class OpenFlexureStage(BasicSerialInstrument):
     step_time = QueriedProperty(get_cmd="dt?", set_cmd="dt %d", response_string="minimum step delay %d")
     ramp_time = QueriedProperty(get_cmd="ramp_time?", set_cmd="ramp_time %d", response_string="ramp time %d")
     axis_names = ('x', 'y', 'z')
+    board = None
 
     def __init__(self, *args, **kwargs):
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
-        assert self.readline(timeout=1).startswith("OpenFlexure Motor Board v0.3")
+        self.board =  self.readline(timeout=1).rstrip()
+        assert self.board.startswith("OpenFlexure Motor Board v0.3"), "Version string \"{}\" not recognised.".format(self.board)
         time.sleep(2)
 
     @property
@@ -179,6 +181,9 @@ class OpenFlexureStage(BasicSerialInstrument):
         """Send a message and read the response.  See BasicSerialInstrument.query()"""
         time.sleep(0.001) # This is to protect the stage from us talking too fast!
         return BasicSerialInstrument.query(self, message, *args, **kwargs)
+    
+    def print_help(self):
+        print(self.query("help",multiline=True,termination_line="--END--\r\n"))
         
 
 if __name__ == "__main__":
@@ -203,8 +208,6 @@ if __name__ == "__main__":
                 print("moving {} by {}".format(axis, move))
                 qs = "mr{} {}".format(axis, move)
                 print(qs + ": " + s.query(str(qs)))
-                #time.sleep(2)
-                #s._ser.write('mrx 100\r')
                 print(s._ser.inWaiting())
                 print("Position: {}".format(s.position))
 
