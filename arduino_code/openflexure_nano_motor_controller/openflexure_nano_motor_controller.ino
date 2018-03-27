@@ -10,7 +10,7 @@
  * 
  * (c) Richard Bowman & James Sharkey, Released under GPL v3, 2017
  */
-#include <StepperF_alt.h>   //Fergus's hacked stepper library
+#include "StepperF_alt.h"   //Fergus's hacked stepper library
 #include <assert.h>
 #include <EEPROM.h>
 

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
 OpenFlexure Stage module
@@ -11,6 +12,7 @@ from __future__ import print_function, division
 import time
 from basic_serial_instrument import BasicSerialInstrument, QueriedProperty, EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import numpy as np
+import sys
 
 class OpenFlexureStage(BasicSerialInstrument):
     port_settings = {'baudrate':115200, 'bytesize':EIGHTBITS, 'parity':PARITY_NONE, 'stopbits':STOPBITS_ONE}
@@ -23,7 +25,7 @@ class OpenFlexureStage(BasicSerialInstrument):
 
     def __init__(self, *args, **kwargs):
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
-        assert self.readline().startswith("OpenFlexure Motor Board v0.3")
+        assert self.readline(timeout=1).startswith("OpenFlexure Motor Board v0.3")
         time.sleep(2)
 
     @property
@@ -88,7 +90,7 @@ class OpenFlexureStage(BasicSerialInstrument):
         Arguments are as for move_rel, but backlash is False
         """
         if axis is not None:
-            assert axis in self.axis_names, "axis must be on of {}".format(self.axis_names)
+            assert axis in self.axis_names, "axis must be one of {}".format(self.axis_names)
             self.query("mr{} {}".format(axis, int(displacement)))
         else:
             #TODO: assert displacement is 3 integers
@@ -180,12 +182,19 @@ class OpenFlexureStage(BasicSerialInstrument):
         
 
 if __name__ == "__main__":
-    s = OpenFlexureStage('COM3')
+    
+    assert len(sys.argv)<3, "Expecting at most one input argument, the port"
+    if len(sys.argv)==1:
+        port = 'COM3'
+    else:
+        port = sys.argv[1]
+    print(port)
+    s = OpenFlexureStage(port)
     time.sleep(1)
     #print(s.query("mrx 1000"))
     #time.sleep(1)
     #print(s.query("mrx -1000"))
-
+    
     #first, try a bunch of single-axis moves with and without acceleration
     for rt in [-1, 500000]:
         s.ramp_time = rt
@@ -194,6 +203,9 @@ if __name__ == "__main__":
                 print("moving {} by {}".format(axis, move))
                 qs = "mr{} {}".format(axis, move)
                 print(qs + ": " + s.query(str(qs)))
+                #time.sleep(2)
+                #s._ser.write('mrx 100\r')
+                print(s._ser.inWaiting())
                 print("Position: {}".format(s.position))
 
     time.sleep(0.5)

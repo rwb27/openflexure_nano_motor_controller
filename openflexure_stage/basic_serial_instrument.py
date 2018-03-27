@@ -18,6 +18,7 @@ from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE
 from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
 import io
+import time
 
 class BasicSerialInstrument(object):
     """
@@ -53,6 +54,7 @@ class BasicSerialInstrument(object):
         Set up the serial port and so on.
         """
         self.port_settings.update(kwargs)
+        print self.port_settings
         self.open(port, False) # Eventually this shouldn't rely on init...
 
     def open(self, port=None, quiet=True):
@@ -230,11 +232,21 @@ class BasicSerialInstrument(object):
             parse_function = [f for f, s in sorted(matched_placeholders, key=lambda m: m[1])] #order parse functions by their occurrence in the original string
         if not hasattr(parse_function,'__iter__'):
             parse_function = [parse_function] #make sure it's a list.
-
+            
         reply = self.query(query_string, **kwargs) #do the query
-        res = re.search(response_regex, reply, flags=re_flags)
-        if res is None:
-            raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/" % (query_string, reply, response_string, response_regex))
+        #if match this could be because another response entered the buffer between write and read. Sleep for short while then
+        #check if something is now in the buffer, while the buffer is not empty repeat regex
+        waited=False
+        res=re.search(response_regex, reply, flags=re_flags)
+        while res is None:
+            if not waited:
+                time.sleep(.1)
+                waited=True
+            if self._ser.inWaiting():
+                reply = self.readline().strip()
+                res=re.search(response_regex, reply, flags=re_flags)
+            else:
+                raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/" % (query_string, reply, response_string, response_regex))
         try:
             parsed_result= [f(g) for f, g in zip(parse_function, res.groups())] #try to apply each parse function to its argument
             if len(parsed_result) == 1:
