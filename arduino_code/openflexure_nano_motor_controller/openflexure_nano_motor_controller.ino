@@ -288,7 +288,7 @@ void print_light_sensor_gain(){
 }
 void print_light_sensor_gain_values(){
   // Print the allowable gain values of the light sensor
-  Serial.println(F("light sensor gains: 0.66x, 1x, 2x, 4x, 8x, 16x"));
+  Serial.println(F("light sensor gains: 0.66x (specify 0), 1x, 2x, 4x, 8x, 16x"));
 }
 
 void set_light_sensor_gain(int newgain){

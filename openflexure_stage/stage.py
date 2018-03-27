@@ -13,6 +13,7 @@ import time
 from basic_serial_instrument import BasicSerialInstrument, QueriedProperty, EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import numpy as np
 import sys
+import re
 
 class OpenFlexureStage(BasicSerialInstrument):
     port_settings = {'baudrate':115200, 'bytesize':EIGHTBITS, 'parity':PARITY_NONE, 'stopbits':STOPBITS_ONE}
@@ -23,12 +24,24 @@ class OpenFlexureStage(BasicSerialInstrument):
     ramp_time = QueriedProperty(get_cmd="ramp_time?", set_cmd="ramp_time %d", response_string="ramp time %d")
     axis_names = ('x', 'y', 'z')
     board = None
+    light_sensor = False
+    light_sensor_name = None
+    valid_light_gains = None
+    valid_light_gains_int = None
 
     def __init__(self, *args, **kwargs):
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
         self.board =  self.readline(timeout=1).rstrip()
         assert self.board.startswith("OpenFlexure Motor Board v0.3"), "Version string \"{}\" not recognised.".format(self.board)
-        time.sleep(2)
+        if 'with TSL2591 support' in self.board:
+            self.light_sensor = True
+            self.light_sensor_name = "TSL2591"
+        elif 'with ADS1115 support' in self.board:
+            self.light_sensor = True
+            self.light_sensor_name = "ADS1115"
+        if self.light_sensor:
+            self.valid_light_gains = self.get_light_sensor_gain_values()
+            self.valid_light_gains_int = [int(g) for g in self.valid_light_gains]
 
     @property
     def n_axes(self):
@@ -155,7 +168,38 @@ class OpenFlexureStage(BasicSerialInstrument):
         keyword arguments, is then passed to ``scan_linear``.
         """
         return self.scan_linear([[0,0,z] for z in dz], **kwargs)
-
+    
+    def get_light_intensity(self):
+        """Read the intensity from the light sensor"""
+        assert self.light_sensor, "No light sensor supported on firmware"
+        return int(self.query('light_sensor_intensity?'))
+    
+    def get_light_sensor_gain(self):
+        """Read the light sensor gain"""
+        assert self.light_sensor, "No light sensor supported on firmware"
+        gain = self.query('light_sensor_gain?')
+        M = re.search('[0-9\.]+(?=x)',gain)
+        assert M is not None, "Cannot read gain string: \"{}\"".format(gain)
+        #gain is a float as non integer gains exist but are set with floor of value
+        return float(M.group())
+    
+    def set_light_sensor_gain(self,val):
+        """set the light sensor gain"""
+        assert self.light_sensor, "No light sensor supported on firmware"
+        assert int(val) in self.valid_light_gains_int, "Gain {} not valid must be one of: {}".format(val,self.valid_light_gains)
+        gain = self.query('light_sensor_gain %d'%(int(val)))
+        M = re.search('[0-9\.]+(?=x)',gain)
+        assert M is not None, "Cannot read gain string: \"{}\"".format(gain)
+        #gain is a float as non integer gains exist but are set with floor of value
+        assert int(val) == int(float(M.group())), 'Gain of {} set, \"{}\" returned'.format(val,gain)
+    
+    def get_light_sensor_gain_values(self):
+        """Read the available light sensor gains"""
+        assert self.light_sensor, "No light sensor supported on firmware"
+        gains = self.query('light_sensor_gain_values?')
+        M = re.findall('[0-9\.]+(?=x)',gains)
+        return [float(gain) for gain in M]
+    
     def __enter__(self):
         """When we use this in a with statement, remember where we started."""
         self._position_on_enter = self.position
