@@ -19,6 +19,7 @@ from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPA
 from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
 import io
 import time
+import warnings
 
 class BasicSerialInstrument(object):
     """
@@ -108,7 +109,7 @@ class BasicSerialInstrument(object):
     def write(self,query_string):
         """Write a string to the serial port"""
         with self.communications_lock:
-            assert self._ser.isOpen(), "Warning: attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
+            assert self._ser.isOpen(), "Attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
 #            try:        
 #                if self._ser.outWaiting()>0: self._ser.flushOutput() #ensure there's nothing waiting
 #            except AttributeError:
@@ -242,11 +243,14 @@ class BasicSerialInstrument(object):
             if not waited:
                 time.sleep(.1)
                 waited=True
+                original_reply = reply
             if self._ser.inWaiting():
                 reply = self.readline().strip()
                 res=re.search(response_regex, reply, flags=re_flags)
+                if res is not None:
+                    warnings.warn("Query suceeded after initially receieving unmatched response ('%s') to '%s'. Match pattern /%s/ (generated regex /%s/)"%(original_reply, query_string, response_string, response_regex),RuntimeWarning)
             else:
-                raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/" % (query_string, reply, response_string, response_regex))
+                raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/)" % (query_string, original_reply, response_string, response_regex))
         try:
             parsed_result= [f(g) for f, g in zip(parse_function, res.groups())] #try to apply each parse function to its argument
             if len(parsed_result) == 1:
@@ -302,8 +306,38 @@ class BasicSerialInstrument(object):
                 return port_name
             else:
                 return None
-
-
+    
+class OptionalModule(object):
+    """Class for defining usse in in BasicSerialInstrument. This is designed as a base class
+    for interfacing with optional modules which may or may not be included with
+    the serial instrument.
+    """
+    
+    def __init__(self,available,parent=None,module_type="Undefined",model="Generic"):
+        assert type(available) is bool, 'Option module availablity should be a boolean not a {}'.format(type(available))
+        self._available=available
+        self._parent=parent
+        assert type(module_type) is str, 'Option module type should be a string not a {}'.format(type(module_typ))
+        self.module_type=module_type
+        if available:
+            assert type(model) is str, 'Option module type should be a string not a {}'.format(type(model))
+            self.model=model
+        else:
+            self.model=None
+    
+    @property
+    def available(self):
+        return self._available
+    
+    def confirm_available(self):
+        """Check if module is available, no return, will raise exception if not available!"""
+        assert self._available, "No \"{}\" supported on firmware".format(self.module_type)
+    
+    def describe(self):
+        """Consistently spaced desciption for listing modules"""
+        return self.module_type+" "*(25-len(self.module_type))+"- "+self.model
+        
+        
 class QueriedProperty(object):
     """A Property interface that reads and writes from the instrument on the bus.
     
@@ -338,8 +372,12 @@ class QueriedProperty(object):
     # TODO: standardise the return (single value only vs parsed result), consider bool
     def __get__(self, obj, objtype=None):
         #print 'get', obj, objtype
+        if issubclass(type(obj),OptionalModule):
+            obj.confirm_available()
+            obj=obj._parent
         if obj is None:
             return self
+        assert issubclass(type(obj),BasicSerialInstrument)
         if self.get_cmd is None:
             raise AttributeError("unreadable attribute")
         # Allow certain "magic" values to set the response string
@@ -357,6 +395,10 @@ class QueriedProperty(object):
 
     def __set__(self, obj, value):
         #print 'set', obj, value
+        if issubclass(type(obj),OptionalModule):
+            obj.confirm_available()
+            obj=obj._parent
+        assert issubclass(type(obj),BasicSerialInstrument)
         if self.set_cmd is None:
             raise AttributeError("can't set attribute")
         if self.validate is not None:

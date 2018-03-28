@@ -179,8 +179,7 @@ void setup_light_sensor(){
   {
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
-    Serial.print(F(VER_STRING));
-    Serial.println(F(" (with TSL2591 support)"));
+    Serial.println(F(VER_STRING));
   } 
   else 
   {
@@ -256,8 +255,7 @@ Adafruit_ADS1115 ads; // pass in a number for the sensor identifier (for your us
 void setup_light_sensor(){
   ads.begin();
   ads.setGain(GAIN_ONE);
-  Serial.print(F(VER_STRING));
-  Serial.println(F(" (with ADS1115 support)"));
+  Serial.println(F(VER_STRING));
 }
 
 void print_light_sensor_gain(){
@@ -354,6 +352,17 @@ void loop() {
       Serial.println("done");
       return;
     }
+
+    if(command.startsWith("list_modules")){//list available modules
+      #if defined ADAFRUIT_TSL2591
+      Serial.println(F("Light Sensor: TSL2591"));
+      #elif defined ADAFRUIT_ADS1115
+      Serial.println(F("Light Sensor: ADS1115"));
+      #endif
+      Serial.println("--END--");
+      return;
+    }
+
     if(command.startsWith("move_rel ") or command.startsWith("mr ")){ //relative move
       int preceding_space = -1;
       long displacement[n_motors];
@@ -478,6 +487,7 @@ void loop() {
       Serial.println(F("<d>                            - a decimal integer."));
       Serial.println("");
       Serial.println("--END--");
+      return;
     }
     Serial.println(F("Type 'help' for a list of commands."));
   }else{
