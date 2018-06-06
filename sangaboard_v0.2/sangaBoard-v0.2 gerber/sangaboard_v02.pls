@@ -1,4 +1,9 @@
 G04 EAGLE Gerber X2 export*
+%TF.Part,Single*%
+%TF.FileFunction,Other,Other*%
+%TF.FilePolarity,Positive*%
+%TF.GenerationSoftware,Autodesk,EAGLE,9.0.1*%
+%TF.CreationDate,2018-06-06T13:14:01Z*%
 G75*
 %MOMM*%
 %FSLAX34Y34*%

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="8.5.2">
+<eagle version="9.0.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -9488,6 +9488,26 @@ In this library the device names are the same as the pin names of the symbols, t
 <pinref part="R3" gate="G$1" pin="1"/>
 <wire x1="-119.38" y1="25.4" x2="-119.38" y2="30.48" width="0.1524" layer="91"/>
 </segment>
+<segment>
+<pinref part="AUX" gate="A" pin="1"/>
+<wire x1="5.08" y1="66.04" x2="0" y2="66.04" width="0.1524" layer="91"/>
+<label x="0" y="66.04" size="1.27" layer="95" ratio="6" rot="R180" xref="yes"/>
+</segment>
+<segment>
+<pinref part="AUX" gate="A" pin="7"/>
+<wire x1="5.08" y1="58.42" x2="0" y2="58.42" width="0.1524" layer="91"/>
+<label x="0" y="58.42" size="1.27" layer="95" ratio="6" rot="R180" xref="yes"/>
+</segment>
+<segment>
+<pinref part="AUX" gate="A" pin="2"/>
+<wire x1="12.7" y1="66.04" x2="17.78" y2="66.04" width="0.1524" layer="91"/>
+<label x="17.78" y="66.04" size="1.27" layer="95" ratio="6" xref="yes"/>
+</segment>
+<segment>
+<pinref part="AUX" gate="A" pin="8"/>
+<wire x1="12.7" y1="58.42" x2="17.78" y2="58.42" width="0.1524" layer="91"/>
+<label x="17.78" y="58.42" size="1.27" layer="95" ratio="6" xref="yes"/>
+</segment>
 </net>
 <net name="VIN" class="0">
 <segment>
@@ -9538,30 +9558,6 @@ In this library the device names are the same as the pin names of the symbols, t
 <wire x1="-119.38" y1="50.8" x2="-119.38" y2="55.88" width="0.1524" layer="91"/>
 <junction x="-119.38" y="55.88"/>
 <pinref part="D1" gate="1" pin="C"/>
-</segment>
-</net>
-<net name="L1" class="0">
-<segment>
-<pinref part="AUX" gate="A" pin="1"/>
-<wire x1="5.08" y1="66.04" x2="0" y2="66.04" width="0.1524" layer="91"/>
-<label x="0" y="66.04" size="1.27" layer="95" ratio="6" rot="R180" xref="yes"/>
-</segment>
-<segment>
-<pinref part="AUX" gate="A" pin="2"/>
-<wire x1="12.7" y1="66.04" x2="17.78" y2="66.04" width="0.1524" layer="91"/>
-<label x="17.78" y="66.04" size="1.27" layer="95" ratio="6" xref="yes"/>
-</segment>
-</net>
-<net name="L2" class="0">
-<segment>
-<pinref part="AUX" gate="A" pin="7"/>
-<wire x1="5.08" y1="58.42" x2="0" y2="58.42" width="0.1524" layer="91"/>
-<label x="0" y="58.42" size="1.27" layer="95" ratio="6" rot="R180" xref="yes"/>
-</segment>
-<segment>
-<pinref part="AUX" gate="A" pin="8"/>
-<wire x1="12.7" y1="58.42" x2="17.78" y2="58.42" width="0.1524" layer="91"/>
-<label x="17.78" y="58.42" size="1.27" layer="95" ratio="6" xref="yes"/>
 </segment>
 </net>
 <net name="N$2" class="0">

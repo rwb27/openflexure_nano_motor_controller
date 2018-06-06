@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="8.5.2">
+<eagle version="8.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -179,6 +179,9 @@
 <text x="12.45" y="54.73" size="1.778" layer="16" font="vector" ratio="15" rot="MR180">Openflexure_Nano_Motor_Controller</text>
 <text x="38.5" y="3.19" size="1.778" layer="1" font="vector" ratio="15">www.sticab.co.tz</text>
 <text x="64.97" y="48.47" size="1.016" layer="25" font="vector" ratio="15" rot="R270">OSHW - Tanzania</text>
+<text x="2.76" y="24.65" size="1.27" layer="26" font="vector" rot="MR180">https://github.com/rwb27/openflexure_nano_motor_controller</text>
+<text x="2.8" y="22.84" size="1.27" layer="26" font="vector" rot="MR180">https://github.com/sangavalerian/openflexure_nano_motor_controller</text>
+<text x="2.46" y="45.38" size="1.27" layer="26" font="vector" rot="MR180">STICLab (TZ), University Of Bath (UK) and Cambridge University (UK).</text>
 </plain>
 <libraries>
 <library name="SparkFun-Connectors">
