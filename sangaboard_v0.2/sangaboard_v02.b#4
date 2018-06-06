@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="8.5.2">
+<eagle version="8.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -179,6 +179,9 @@
 <text x="12.45" y="54.73" size="1.778" layer="16" font="vector" ratio="15" rot="MR180">Openflexure_Nano_Motor_Controller</text>
 <text x="38.5" y="3.19" size="1.778" layer="1" font="vector" ratio="15">www.sticab.co.tz</text>
 <text x="64.97" y="48.47" size="1.016" layer="25" font="vector" ratio="15" rot="R270">OSHW - Tanzania</text>
+<text x="2.95" y="25.11" size="1.4224" layer="26" rot="MR180">https://github.com/rwb27/openflexure_nano_motor_controller</text>
+<text x="3.07" y="22.97" size="1.4224" layer="26" rot="MR180">https://github.com/sangavalerian/openflexure_nano_motor_controller</text>
+<text x="2.01" y="45.51" size="1.4224" layer="26" rot="MR180">STICLab (TZ), University Of Bath (UK) and Cambridge University (UK).</text>
 </plain>
 <libraries>
 <library name="SparkFun-Connectors">
@@ -2102,7 +2105,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="33.19" y="3.657" size="0.6096" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="16.78" y="3.778" size="0.6096" layer="27" font="vector" ratio="20"/>
 </element>
-<element name="IC1" library="ULN2003A" package="DIL16" value="ULN2003AN" x="16.51" y="38.1" smashed="yes">
+<element name="IC1" library="ULN2003A" package="DIL16" value="ULN2003A" x="16.51" y="38.1" smashed="yes">
 <attribute name="AVAILABILITY" value="Unavailable" x="16.51" y="38.1" size="1.778" layer="27" display="off"/>
 <attribute name="DESCRIPTION" value="IC PWR RELAY 7NPN 1:1 16DIP" x="16.51" y="38.1" size="1.778" layer="27" display="off"/>
 <attribute name="MF" value="STMicroelectronics" x="16.51" y="38.1" size="1.778" layer="27" display="off"/>
@@ -2112,7 +2115,7 @@ design rules under a new name.</description>
 <attribute name="PRICE" value="None" x="16.51" y="38.1" size="1.778" layer="27" display="off"/>
 <attribute name="VALUE" x="13.363440625" y="37.524696875" size="1.2706" layer="27" ratio="10"/>
 </element>
-<element name="IC2" library="ULN2003A" package="DIL16" value="ULN2003AN" x="38.1" y="38.1" smashed="yes">
+<element name="IC2" library="ULN2003A" package="DIL16" value="ULN2003A" x="38.1" y="38.1" smashed="yes">
 <attribute name="AVAILABILITY" value="Unavailable" x="38.1" y="38.1" size="1.778" layer="27" display="off"/>
 <attribute name="DESCRIPTION" value="IC PWR RELAY 7NPN 1:1 16DIP" x="38.1" y="38.1" size="1.778" layer="27" display="off"/>
 <attribute name="MF" value="STMicroelectronics" x="38.1" y="38.1" size="1.778" layer="27" display="off"/>
