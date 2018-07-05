@@ -10,28 +10,29 @@
  * 
  * (c) Richard Bowman & James Sharkey, Released under GPL v3, 2017
  */
-#include <StepperF_alt.h>   //Fergus's hacked stepper library
+#include "StepperF_alt.h"   //Fergus's hacked stepper library
 #include <assert.h>
 #include <EEPROM.h>
 
 // LIGHT SENSOR SUPPORT
 // Uncomment (exactly) one of the lines below to enable support for that sensor.
-//#define ADAFRUIT_TSL2591
+#define ADAFRUIT_TSL2591
 //#define ADAFRUIT_ADS1115
 
 #ifdef ADAFRUIT_TSL2591
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include "Adafruit_TSL2591.h"
+#include <Adafruit_TSL2591.h>
 #define LIGHT_SENSOR
 #endif
 #ifdef ADAFRUIT_ADS1115
 #include <Wire.h>
-#include "Adafruit_ADS1015.h"
+#include <Adafruit_ADS1015.h>
 #define LIGHT_SENSOR
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
+#define VER_STRING "OpenFlexure Motor Board v0.3"
 
 // The array below has 3 stepper objects, for X,Y,Z respectively
 const int n_motors = 3;
@@ -41,7 +42,7 @@ long ramp_time;
 const int ramp_time_eeprom = sizeof(long)*(n_motors+1);
 Stepper* motors[n_motors];
 signed long current_pos[n_motors];
-int steps_remaining[n_motors];
+long steps_remaining[n_motors];
 
 // We'll use this input buffer for serial comms
 const int INPUT_BUFFER_LENGTH = 64;
@@ -87,12 +88,12 @@ void setup() {
   #ifdef LIGHT_SENSOR
   setup_light_sensor();
   #else
-  Serial.println(F("OpenFlexure Motor Board v0.3"));
+  Serial.println(F(VER_STRING));
   #endif /* LIGHT_SENSOR */
   
 }
 
-void stepMotor(int motor, int dx){
+void stepMotor(int motor, long dx){
   //make a single step of a single motor.  
   current_pos[motor] += dx;
   motors[motor]->stepMotor(((current_pos[motor] % 8) + 8) % 8); //forgive the double-modulo; I need 0-7 even for -ve numbers
@@ -111,11 +112,11 @@ void print_position(){
   Serial.println();
 }
 
-void move_axes(int displacement[n_motors]){
+void move_axes(long displacement[n_motors]){
   // move all the axes in a nice move
   // split displacements into magnitude and direction, and find max. travel
-    int max_steps = 0;
-    int dir[n_motors];
+    long max_steps = 0;
+    long dir[n_motors];
     EACH_MOTOR{
       dir[i] = displacement[i] > 0 ? 1 : -1;
       displacement [i] *= dir[i];
@@ -131,7 +132,7 @@ void move_axes(int displacement[n_motors]){
     }
     // actually make the move
     bool finished = false;
-    int distance_moved[n_motors];
+    long distance_moved[n_motors];
     EACH_MOTOR distance_moved[i] = 0;
     float start = (float) micros();
     float final_scaled_t = (float) max_steps * min_step_delay; //NB total time taken will be final_scaled_t + 2*ramp_time
@@ -178,7 +179,7 @@ void setup_light_sensor(){
   {
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
-    Serial.println(F("OpenFlexure Motor Board (with TSL2591 support)"));
+    Serial.println(F(VER_STRING));
   } 
   else 
   {
@@ -254,7 +255,7 @@ Adafruit_ADS1115 ads; // pass in a number for the sensor identifier (for your us
 void setup_light_sensor(){
   ads.begin();
   ads.setGain(GAIN_ONE);
-  Serial.println(F("OpenFlexure Motor Board (with ADS1115 support)"));
+  Serial.println(F(VER_STRING));
 }
 
 void print_light_sensor_gain(){
@@ -285,7 +286,7 @@ void print_light_sensor_gain(){
 }
 void print_light_sensor_gain_values(){
   // Print the allowable gain values of the light sensor
-  Serial.println(F("light sensor gains: 0.66x, 1x, 2x, 4x, 8x, 16x"));
+  Serial.println(F("light sensor gains: 0.66x (specify 0), 1x, 2x, 4x, 8x, 16x"));
 }
 
 void set_light_sensor_gain(int newgain){
@@ -343,17 +344,28 @@ void loop() {
     if(axis >= 0){
       int preceding_space = command.indexOf(' ',0);
       if(preceding_space <= 0) Serial.println("Bad command.");
-      int n_steps = command.substring(preceding_space+1).toInt();
-      int displacement[n_motors];
+      long n_steps = command.substring(preceding_space+1).toInt();
+      long displacement[n_motors];
       EACH_MOTOR displacement[i]=0;
       displacement[axis]=n_steps;
       move_axes(displacement);
       Serial.println("done");
       return;
     }
+
+    if(command.startsWith("list_modules")){//list available modules
+      #if defined ADAFRUIT_TSL2591
+      Serial.println(F("Light Sensor: TSL2591"));
+      #elif defined ADAFRUIT_ADS1115
+      Serial.println(F("Light Sensor: ADS1115"));
+      #endif
+      Serial.println("--END--");
+      return;
+    }
+
     if(command.startsWith("move_rel ") or command.startsWith("mr ")){ //relative move
       int preceding_space = -1;
-      int displacement[n_motors];
+      long displacement[n_motors];
       EACH_MOTOR{ //read three integers and store in steps_remaining
         preceding_space = command.indexOf(' ',preceding_space+1);
         if(preceding_space<0){
@@ -442,34 +454,40 @@ void loop() {
     }
     #endif //LIGHT_SENSOR
     if(command.startsWith("help")){
-      Serial.println(F("OpenFlexure Motor Controller firmware v0.1"));
-      Serial.println(F("Commands (terminated by a newline character):"));
-      Serial.println(F("mrx ??? - relative move in x"));
-      Serial.println(F("mrx ??? - relative move in x"));
-      Serial.println(F("mrx ??? - relative move in x"));
-      Serial.println(F("mr ??? ??? ??? - relative move in all 3 axes"));
-      Serial.println(F("release - de-energise all motors"));
-      Serial.println(F("p? - print position (3 space-separated integers"));
-      Serial.println(F("ramp_time ??? - set the time taken to accelerate/decelerate in us"));
-      Serial.println(F("min_step_delay ??? - set the minimum time between steps in us."));
-      Serial.println(F("dt ??? - set the minimum time between steps in us."));
-      Serial.println(F("ramp_time? - get the time taken to accelerate/decelerate in us"));
-      Serial.println(F("min_step_delay? - get the minimum time between steps in us."));
-      Serial.println(F("zero - set the current position to zero."));
-      #ifdef LIGHT_SENSOR
+      Serial.println("");
+      Serial.println(F(VER_STRING));
       #if defined ADAFRUIT_TSL2591
       Serial.println(F("Compiled with Adafruit TSL2591 support"));
       #elif defined ADAFRUIT_ADS1115
       Serial.println(F("Compiled with Adafruit ADS1115 support"));
       #endif
-      Serial.println(F("light_sensor_gain ??? - set the gain of the light sensor"));
-      Serial.println(F("light_sensor_gain? - get the gain of the light sensor"));
-      Serial.println(F("light_sensor_gain_values? - get the allowable gain values of the light sensor"));
+      Serial.println("");
+      Serial.println(F("Commands (terminated by a newline character):"));
+      Serial.println(F("mrx <d>                        - relative move in x"));
+      Serial.println(F("mrx <d>                        - relative move in x"));
+      Serial.println(F("mrx <d>                        - relative move in x"));
+      Serial.println(F("mr <d> <d> <d>                 - relative move in all 3 axes"));
+      Serial.println(F("release                        - de-energise all motors"));
+      Serial.println(F("p?                             - print position (3 space-separated integers"));
+      Serial.println(F("ramp_time <d>                  - set the time taken to accelerate/decelerate in us"));
+      Serial.println(F("min_step_delay <d>             - set the minimum time between steps in us."));
+      Serial.println(F("dt <d>                         - set the minimum time between steps in us."));
+      Serial.println(F("ramp_time?                     - get the time taken to accelerate/decelerate in us"));
+      Serial.println(F("min_step_delay?                - get the minimum time between steps in us."));
+      Serial.println(F("zero                           - set the current position to zero."));
+      #ifdef LIGHT_SENSOR
+      Serial.println(F("light_sensor_gain <d>          - set the gain of the light sensor"));
+      Serial.println(F("light_sensor_gain?             - get the gain of the light sensor"));
+      Serial.println(F("light_sensor_gain_values?      - get the allowable gain values of the light sensor"));
       Serial.println(F("light_sensor_integration_time? - get the integration time in milliseconds"));
-      Serial.println(F("light_sensor_intensity? - read the current value from the full spectrum diode"));
+      Serial.println(F("light_sensor_intensity?        - read the current value from the full spectrum diode"));
       #endif //LIGHT_SENSOR
       Serial.println("");
-      Serial.println(F("??? means a decimal integer."));
+      Serial.println("Input Key:");
+      Serial.println(F("<d>                            - a decimal integer."));
+      Serial.println("");
+      Serial.println("--END--");
+      return;
     }
     Serial.println(F("Type 'help' for a list of commands."));
   }else{
