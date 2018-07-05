@@ -8,7 +8,7 @@
 </settings>
 <grid distance="0.01" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.005" altunitdist="inch" altunit="inch"/>
 <layers>
-<layer number="1" name="Top" color="4" fill="1" visible="no" active="yes"/>
+<layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
 <layer number="3" name="Route3" color="4" fill="3" visible="no" active="no"/>
 <layer number="4" name="Route4" color="1" fill="4" visible="no" active="no"/>
@@ -175,8 +175,10 @@
 <wire x1="67.29" y1="1.27" x2="67.29" y2="56.82" width="0" layer="20"/>
 <wire x1="67.29" y1="56.82" x2="0" y2="56.82" width="0" layer="20"/>
 <wire x1="0" y1="56.82" x2="0" y2="1.27" width="0" layer="20"/>
-<text x="4.24" y="27.54" size="1.778" layer="1" font="vector" ratio="15" rot="R90">sangaboard_v02</text>
+<text x="4.24" y="27.54" size="1.778" layer="1" font="vector" ratio="15" rot="R90">sangaboard_v0.2</text>
 <text x="12.45" y="54.73" size="1.778" layer="16" font="vector" ratio="15" rot="MR180">Openflexure_Nano_Motor_Controller</text>
+<text x="38.5" y="3.19" size="1.778" layer="1" font="vector" ratio="15">www.sticab.co.tz</text>
+<text x="64.97" y="48.47" size="1.016" layer="25" font="vector" ratio="15" rot="R270">OSHW - Tanzania</text>
 </plain>
 <libraries>
 <library name="SparkFun-Connectors">
@@ -2126,9 +2128,9 @@ design rules under a new name.</description>
 </element>
 <element name="MICROUSB" library="audio amplifier example" library_urn="urn:adsk.eagle:library:970892" package="1981584-1" package3d_urn="urn:adsk.eagle:package:970926/2" value="USB_POWER" x="66.04" y="19.05" smashed="yes" rot="R90">
 <attribute name="MFPN" value="" x="66.04" y="19.05" size="1.778" layer="27" rot="R90" display="off"/>
-<attribute name="NAME" x="63.44" y="22.44" size="1.016" layer="25" font="vector" ratio="18" rot="R270"/>
+<attribute name="NAME" x="65.49" y="14.07" size="1.016" layer="25" font="vector" ratio="18" rot="R270"/>
 <attribute name="PARTNO" value="" x="66.04" y="19.05" size="1.778" layer="27" rot="R90" display="off"/>
-<attribute name="VALUE" x="65.25" y="8.56" size="0.8128" layer="27" font="vector" ratio="10" rot="R90"/>
+<attribute name="VALUE" x="62.24" y="8.82" size="0.8128" layer="27" font="vector" ratio="10" rot="R90"/>
 </element>
 <element name="MOTOR1" library="con-lstb" library_urn="urn:adsk.eagle:library:162" package="MA05-1" package3d_urn="urn:adsk.eagle:package:8332/1" value="J4" x="12.7" y="48.26" smashed="yes" rot="R180">
 <attribute name="MF" value="" x="12.7" y="48.26" size="1.778" layer="27" rot="R180" display="off"/>
@@ -2177,7 +2179,6 @@ design rules under a new name.</description>
 <element name="U$3" library="holes" library_urn="urn:adsk.eagle:library:237" package="3,0" package3d_urn="urn:adsk.eagle:package:14277/1" value="" x="3.81" y="53.34"/>
 <element name="U$4" library="holes" library_urn="urn:adsk.eagle:library:237" package="3,0" package3d_urn="urn:adsk.eagle:package:14277/1" value="" x="62.23" y="53.34"/>
 <element name="U$5" library="SparkFun-Aesthetics" package="OSHW-LOGO-L" value="" x="62.06" y="42.89" rot="R90"/>
-<element name="U$6" library="SparkFun-Aesthetics" package="OSHW-LOGO-L" value="" x="5.57" y="14.03" rot="R90"/>
 </elements>
 <signals>
 <signal name="M3_D">

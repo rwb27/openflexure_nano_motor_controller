@@ -1,7 +1,7 @@
 G04 Gerber job file.*
 %TF.FileFunction,JobInfo*%
-%TF.GenerationSoftware,Autodesk,EAGLE,8.6.0*%
-%TF.CreationDate,2018-01-29T12:42:45Z*%
+%TF.GenerationSoftware,Autodesk,EAGLE,9.0.1*%
+%TF.CreationDate,2018-06-06T13:14:01Z*%
 %TF.Part,Single*%
 %MOMM*%
 %TJ.B_Owner,Valerian Sanga <sangavalerian@live.com>*%
