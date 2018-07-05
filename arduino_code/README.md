@@ -9,7 +9,7 @@ Requires version 1.6.2 or higher
 (Note the Ubuntu/Debian package version 2:1.0.5, is version 1.0.5 and hence will **NOT** work!)
 
 ## Install libraries for Adafruit
-Adafruit libraries are required for light sensor support. These libraries can be installed in the Aruino library directory (normally `~/Arduino/libraries` on Linux or `C:\My Documents\Arduino\libraries` on Windows) and can be found on the [adafruit github](https://github.com/adafruit).
+Adafruit libraries are required for light sensor support. These libraries can be installed in the Aruino library directory (normally `~/Arduino/libraries` on Linux or `My Documents\Arduino\libraries` on Windows) and can be found on the [adafruit github](https://github.com/adafruit).
 The easiest method to install is
 
 	cd ~/Arduino/libraries
