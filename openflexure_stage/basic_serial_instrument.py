@@ -9,6 +9,7 @@ It is a basic serial instrument class for things that talk on serial ports.
 @author: richard bowman (c) 2017, released under GNU GPL
 """
 
+from __future__ import print_function, division
 import re
 from functools import partial
 import threading
