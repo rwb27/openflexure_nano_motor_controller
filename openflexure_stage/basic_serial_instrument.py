@@ -56,7 +56,7 @@ class BasicSerialInstrument(object):
         Set up the serial port and so on.
         """
         self.port_settings.update(kwargs)
-        print self.port_settings
+        print(self.port_settings)
         self.open(port, False) # Eventually this shouldn't rely on init...
 
     def open(self, port=None, quiet=True):
