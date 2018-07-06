@@ -66,14 +66,11 @@ class BasicSerialInstrument(object):
         """
         with self.communications_lock:
             if hasattr(self,'_ser') and self._ser.isOpen():
-                if not quiet: print "Warning: attempted to open an already-open port!"
+                if not quiet: print("Warning: attempted to open an already-open port!")
                 return
             if port is None: port=self.find_port()
             assert port is not None, "We don't have a serial port to open, meaning you didn't specify a valid port and autodetection failed.  Are you sure the instrument is connected?"
             self._ser = serial.Serial(port,**self.port_settings)
-            self._ser_io = io.TextIOWrapper(io.BufferedRWPair(self._ser, self._ser, 1),  
-                                           newline = self.termination_character,
-                                           line_buffering = True)
             #the block above wraps the serial IO layer with a text IO layer
             #this allows us to read/write in neat lines.  NB the buffer size must
             #be set to 1 byte for maximum responsiveness.
@@ -85,8 +82,8 @@ class BasicSerialInstrument(object):
             try:
                 self._ser.close()
             except Exception as e:
-                print "The serial port didn't close cleanly:", e
-                
+                print("The serial port didn't close cleanly:", e)
+
     def __del__(self):
         """Close the port when the object is deleted
         
@@ -102,7 +99,7 @@ class BasicSerialInstrument(object):
     def __exit__(self, type, value, traceback):
         """Close down the instrument.  This happens in __del__ though."""
         if type is not None:
-            print "An exception occurred inside a with block, resetting "
+            print("An exception occurred inside a with block, resetting ")
             "position to its value at the start of the with block"
             self.move_abs(self._position_on_enter)
         
@@ -114,7 +111,9 @@ class BasicSerialInstrument(object):
 #                if self._ser.outWaiting()>0: self._ser.flushOutput() #ensure there's nothing waiting
 #            except AttributeError:
 #                if self._ser.out_waiting>0: self._ser.flushOutput() #ensure there's nothing waiting
-            self._ser.write(query_string+self.termination_character)
+            data=query_string+self.termination_character
+            data=data.encode()
+            self._ser.write(data)
 
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
@@ -123,7 +122,7 @@ class BasicSerialInstrument(object):
     def readline(self, timeout=None):
         """Read one line from the serial port."""
         with self.communications_lock:
-            return self._ser_io.readline().replace(self.termination_character,"\n")
+            return self._ser.readline().decode('utf8').replace(self.termination_character,"\n")
 
     _communications_lock = None
     @property
@@ -185,7 +184,7 @@ class BasicSerialInstrument(object):
                 if first_line == queryString:
                     return self.readline(timeout).strip()
                 else:
-                    print 'This command did not echo!!!'
+                    print('This command did not echo!!!')
                     return first_line
     
             if termination_line is not None:
@@ -258,9 +257,9 @@ class BasicSerialInstrument(object):
             else:
                 return parsed_result
         except ValueError:
-            print "Parsing Error"
-            print "Matched Groups:", res.groups()
-            print "Parsing Functions:", parse_function
+            print("Parsing Error")
+            print("Matched Groups:", res.groups())
+            print("Parsing Functions:", parse_function)
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
     def int_query(self, query_string, **kwargs):
         """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
@@ -289,10 +288,10 @@ class BasicSerialInstrument(object):
             success = False
             for port_name, _, _ in serial.tools.list_ports.comports(): #loop through serial ports, apparently 256 is the limit?!
                 try:
-                    print "Trying port",port_name
+                    print("Trying port",port_name)
                     self.open(port_name)
                     success = True
-                    print "Success!"
+                    print("Success!")
                 except:
                     pass
                 finally:
