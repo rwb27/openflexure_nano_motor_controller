@@ -27,7 +27,8 @@ setup(name = 'openflexure_stage',
           'Programming Language :: Python :: 2.7'
           ],
       install_requires = [
-          'pyserial'
+          'pyserial',
+          'future'
           ],
       )
 
