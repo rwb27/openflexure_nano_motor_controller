@@ -10,7 +10,7 @@ It is (c) Richard Bowman 2017 and released under GNU GPL v3
 """
 from __future__ import print_function, division
 import time
-from basic_serial_instrument import BasicSerialInstrument, OptionalModule, QueriedProperty, EIGHTBITS, PARITY_NONE, STOPBITS_ONE
+from .basic_serial_instrument import BasicSerialInstrument, OptionalModule, QueriedProperty, EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import numpy as np
 import sys
 import re
@@ -33,10 +33,10 @@ class OpenFlexureStage(BasicSerialInstrument):
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
         self.board =  self.readline(timeout=1).rstrip()
         assert self.board.startswith("OpenFlexure Motor Board v0.3"), "Version string \"{}\" not recognised.".format(self.board)
-        
+
         #Bit messy: Defining all valid modules as not available, then overwriting with available information if available.
         self.light_sensor=LightSensor(False)
-        
+
         for module in self.list_modules():
             module_type=module.split(':')[0].strip()
             module_model=module.split(':')[1].strip()
@@ -52,7 +52,7 @@ class OpenFlexureStage(BasicSerialInstrument):
     def n_axes(self):
         """The number of axes this stage has."""
         return len(self.axis_names)
-    
+
     _backlash = None
     @property
     def backlash(self):
@@ -96,7 +96,7 @@ class OpenFlexureStage(BasicSerialInstrument):
         # For each axis where we're moving in the *opposite*
         # direction to self.backlash, we deliberately overshoot:
         initial_move -= np.where(self.backlash*displacement < 0,
-                                 self.backlash, 
+                                 self.backlash,
                                  np.zeros(self.n_axes, dtype=self.backlash.dtype))
         self._move_rel_nobacklash(initial_move)
         if np.any(displacement - initial_move != 0):
@@ -106,7 +106,7 @@ class OpenFlexureStage(BasicSerialInstrument):
 
     def _move_rel_nobacklash(self, displacement, axis=None):
         """Just make a move - no messing about with backlash correction!
-        
+
         Arguments are as for move_rel, but backlash is False
         """
         if axis is not None:
@@ -115,14 +115,14 @@ class OpenFlexureStage(BasicSerialInstrument):
         else:
             #TODO: assert displacement is 3 integers
             self.query("mr {} {} {}".format(*list(displacement)))
-    
+
     def release_motors(self):
         """De-energise the stepper motor coils"""
         self.query("release")
 
     def move_abs(self, final, **kwargs):
         """Make an absolute move to a position
-        
+
         NB the stage only accepts relative move commands, so this first
         queries the stage for its position, then instructs it to make about
         relative move.
@@ -134,15 +134,15 @@ class OpenFlexureStage(BasicSerialInstrument):
     def focus_rel(self, z):
         """Move the stage in the Z direction by z micro steps."""
         self.move_rel([0, 0, z])
-	
+
     def scan_linear(self, rel_positions, backlash=True, return_to_start=True):
         """Scan through a list of (relative) positions (generator fn)
-        
+
         rel_positions should be an nx3-element array (or list of 3 element arrays).  
         Positions should be relative to the starting position - not a list of relative moves.
 
         backlash argument is passed to move_rel
-        
+
         if return_to_start is True (default) we return to the starting position after a
         successful scan.  NB we always attempt to return to the starting position if an
         exception occurs during the scan..
@@ -166,14 +166,14 @@ class OpenFlexureStage(BasicSerialInstrument):
 
     def scan_z(self, dz, **kwargs):
         """Scan through a list of (relative) z positions (generator fn)
-        
+
         This function takes a 1D numpy array of Z positions, relative to
         the position at the start of the scan, and converts it into an
         array of 3D positions with x=y=0.  This, along with all the
         keyword arguments, is then passed to ``scan_linear``.
         """
         return self.scan_linear([[0,0,z] for z in dz], **kwargs)
-    
+
     def __enter__(self):
         """When we use this in a with statement, remember where we started."""
         self._position_on_enter = self.position
@@ -194,18 +194,18 @@ class OpenFlexureStage(BasicSerialInstrument):
                 print("A further exception occurred when resetting position: {}".format(e))
             print("Move completed, raising exception...")
             raise value #propagate the exception
-                
+
     def query(self, message, *args, **kwargs):
         """Send a message and read the response.  See BasicSerialInstrument.query()"""
         time.sleep(0.001) # This is to protect the stage from us talking too fast!
         return BasicSerialInstrument.query(self, message, *args, **kwargs)
-    
+
     def list_modules(self):
         """ List all modules in form:
         Module Name: Model"""
         modules =  self.query("list_modules",multiline=True,termination_line="--END--\r\n").split('\r\n')[:-2]
         return [str(module) for module in modules]
-    
+
     def print_help(self):
         print(self.query("help",multiline=True,termination_line="--END--\r\n"))
 
@@ -214,7 +214,7 @@ class LightSensor(OptionalModule):
     _valid_gains_int = None
     integration_time = QueriedProperty(get_cmd="light_sensor_integration_time?", set_cmd="light_sensor_integration_time %d", response_string="light sensor integration time %d ms")
     intensity = QueriedProperty(get_cmd="light_sensor_intensity?", response_string="%d")
-    
+
     def __init__(self,available,parent=None,model="Generic"):
         super(LightSensor, self).__init__(available,parent=parent,module_type="LightSensor",model=model)
         if available:
@@ -230,7 +230,7 @@ class LightSensor(OptionalModule):
         assert M is not None, "Cannot read gain string: \"{}\"".format(gain)
         #gain is a float as non integer gains exist but are set with floor of value
         return float(M.group())
-    
+
     @gain.setter
     def gain(self,val):
         """set the light sensor gain"""
@@ -241,18 +241,18 @@ class LightSensor(OptionalModule):
         assert M is not None, "Cannot read gain string: \"{}\"".format(gain)
         #gain is a float as non integer gains exist but are set with floor of value
         assert int(val) == int(float(M.group())), 'Gain of {} set, \"{}\" returned'.format(val,gain)
-    
+
     def __get_gain_values(self):
         """Read the available light sensor gains"""
         self.confirm_available()
         gains = self._parent.query('light_sensor_gain_values?')
         M = re.findall('[0-9\.]+(?=x)',gains)
         return [float(gain) for gain in M] 
-          
+
 
 
 if __name__ == "__main__":
-    
+
     assert len(sys.argv)<3, "Expecting at most one input argument, the port"
     if len(sys.argv)==1:
         port = 'COM3'
@@ -264,7 +264,7 @@ if __name__ == "__main__":
     #print(s.query("mrx 1000"))
     #time.sleep(1)
     #print(s.query("mrx -1000"))
-    
+
     #first, try a bunch of single-axis moves with and without acceleration
     for rt in [-1, 500000]:
         s.ramp_time = rt
@@ -290,6 +290,6 @@ if __name__ == "__main__":
         newpos = np.array([np.cos(a), np.sin(a), 0]) * radius
         displacement = newpos - oldpos
         s.move_rel(list(displacement))
-    
+
 
     s.close()
