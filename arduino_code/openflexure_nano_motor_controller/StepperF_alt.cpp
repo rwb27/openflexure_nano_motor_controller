@@ -85,6 +85,7 @@
 
 #include "Arduino.h"
 #include "StepperF_alt.h"
+#include <limits.h>
 
 ///*
 // * two-wire constructor.
@@ -202,8 +203,16 @@ void Stepper::step(int steps_to_move)
   while (steps_left > 0)
   {
     unsigned long now = micros();
+    unsigned long time_since_last;
+
+    //micros() overflows after ~70 min runtime
+    if(now < this->last_step_time)
+      time_since_last=now+(ULONG_MAX-this->last_step_time);
+    else
+      time_since_last=now-this->last_step_time;
+      
     // move only if the appropriate delay has passed:
-    if (now - this->last_step_time >= this->step_delay)
+    if (time_since_last >= this->step_delay)
     {
       // get the timeStamp of when you stepped:
       this->last_step_time = now;
