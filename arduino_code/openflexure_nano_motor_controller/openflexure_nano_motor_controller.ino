@@ -13,6 +13,7 @@
 #include "StepperF_alt.h"   //Fergus's hacked stepper library
 #include <assert.h>
 #include <EEPROM.h>
+#include <limits.h>
 
 // LIGHT SENSOR SUPPORT
 // Uncomment (exactly) one of the lines below to enable support for that sensor.
@@ -134,10 +135,16 @@ void move_axes(long displacement[n_motors]){
     bool finished = false;
     long distance_moved[n_motors];
     EACH_MOTOR distance_moved[i] = 0;
-    float start = (float) micros();
+    unsigned long start = micros();
     float final_scaled_t = (float) max_steps * min_step_delay; //NB total time taken will be final_scaled_t + 2*ramp_time
     while(!finished){
-      float elapsed_t = (float) micros() - start;
+      unsigned long now=micros();
+      float elapsed_t;
+      if(now<start) //overflow in micros() after ~70 min
+        elapsed_t=(float) (now+(ULONG_MAX-start));
+      else
+        elapsed_t = (float) (now-start);
+
       float scaled_t; //scale time to allow for acceleration
       if(ramp_time > 0){
         // if a ramp time is specified, accelerate at a constant acceleration for the
