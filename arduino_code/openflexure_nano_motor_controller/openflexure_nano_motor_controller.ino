@@ -17,7 +17,7 @@
 
 // LIGHT SENSOR SUPPORT
 // Uncomment (exactly) one of the lines below to enable support for that sensor.
-#define ADAFRUIT_TSL2591
+//#define ADAFRUIT_TSL2591
 //#define ADAFRUIT_ADS1115
 
 #ifdef ADAFRUIT_TSL2591
@@ -30,6 +30,30 @@
 #include <Wire.h>
 #include <Adafruit_ADS1015.h>
 #define LIGHT_SENSOR
+#endif
+
+
+/*
+ ************
+ * ENDSTOPS *
+ ************
+*/
+#define ENDSTOPS_MIN
+//#define ENDSTOPS_MAX
+
+#if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
+  //endstops are closed when the pin is down  by default, this inverts the behaviour
+  #define ENDSTOPS_INVERT false
+  
+  #define ENDSTOPS_PULLUPS true
+
+  //soft endstops trigger when 0/MAX is reached in the direction without endstops
+  #define SOFT_ENDSTOPS
+
+  //endstops wiring and positions
+  const int endstops_min[]={A0,A1,A2};
+  //const int endstops_max[]={A0,A1,A2};
+  const long axis_max[]={30000,2000,30000}; //TODO calculate/measure
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
@@ -91,7 +115,53 @@ void setup() {
   #else
   Serial.println(F(VER_STRING));
   #endif /* LIGHT_SENSOR */
+
+  #ifdef ENDSTOPS_MIN
+    EACH_MOTOR{
+      if(ENDSTOPS_PULLUPS)
+        pinMode(endstops_min[i], INPUT_PULLUP);
+      else
+        pinMode(endstops_min[i], INPUT);
+    }
+  #endif
+
+  #ifdef ENDSTOPS_MAX
+    EACH_MOTOR{
+      if(ENDSTOPS_PULLUPS)
+        pinMode(endstops_max[i], INPUT_PULLUP);
+      else
+        pinMode(endstops_max[i], INPUT);
+    }
+  #endif
   
+}
+
+/**
+* Check if endstop is triggered, direction {-1,+1} for {min,max} endstop
+*/
+boolean endstopTriggered(int axis, int direction){
+#if defined(ENDSTOPS_MIN)
+    if(direction==-1){
+      int value=analogRead(endstops_min[axis]);
+      if(ENDSTOPS_INVERT!=(value<100))
+        return true;
+    }
+#elif defined(SOFT_ENDSTOPS)
+    if(direction==-1 && current_pos[axis]<1)
+        return true;
+#endif
+
+#if defined(ENDSTOPS_MAX)
+  if(direction==1){
+      int value=analogRead(endstops_max[axis]);
+      if(ENDSTOPS_INVERT!=(value<100))
+        return true;
+  }
+#elif defined(SOFT_ENDSTOPS)
+  if(direction==1 && current_pos[axis]>=axis_max[axis])
+    return true;
+#endif
+  return false;
 }
 
 void stepMotor(int motor, long dx){
@@ -113,9 +183,58 @@ void print_position(){
   Serial.println();
 }
 
-void move_axes(long displacement[n_motors]){
+//TODO: test
+void home_all(){
+  #ifdef ENDSTOPS_MIN
+    int hit=0;
+    int shift=10;
+    long displ[]={-150000,-150000,-150000};
+    //home all 3 axes
+    for(int i=0;i<3;i++){
+      hit=move_axes(displ);
+      //avoid multiple shifts back
+      for(char j=0;j<3;j++)
+        if(displ[j]==shift)
+          displ[j]=0;
+      displ[-hit-1]=shift;
+    }
+    //now we should be <shift> steps away in all axes, go slowly back for maximum accuracy
+    EACH_MOTOR{
+      while(!endstopTriggered(i,-1)){
+        stepMotor(i,-1);
+        delayMicroseconds(50000);
+      }
+      current_pos[i]=0;
+    }
+  #endif
+
+  #ifdef ENDSTOPS_MAX
+    int hit=0;
+    int shift=10;
+    long displ[]={150000,150000,150000};
+    //home all 3 axes
+    for(int i=0;i<3;i++){
+      hit=move_axes(displ);
+      for(char j=0;j<3;j++)
+        if(displ[j]==-shift)
+          displ[j]=0;
+      displ[-hit-1]=-shift;
+    }
+    
+    EACH_MOTOR{
+      while(!endstopTriggered(i,1)){
+        stepMotor(i,1);
+        delayMicroseconds(50000);
+      }
+      axis_max[i]=current_pos[i];
+    }
+  #endif
+}
+
+int move_axes(long displacement[n_motors]){
   // move all the axes in a nice move
   // split displacements into magnitude and direction, and find max. travel
+    int ret=0;
     long max_steps = 0;
     long dir[n_motors];
     EACH_MOTOR{
@@ -138,6 +257,32 @@ void move_axes(long displacement[n_motors]){
     unsigned long start = micros();
     float final_scaled_t = (float) max_steps * min_step_delay; //NB total time taken will be final_scaled_t + 2*ramp_time
     while(!finished){
+      #if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
+        int endstop_break=0;
+        EACH_MOTOR{
+          if(endstopTriggered(i,dir[i]))
+            endstop_break=dir[i]*(i+1);
+        }
+        if(endstop_break!=0){
+          Serial.print("Endstop hit:");
+          Serial.println(endstop_break);
+          //if we have both min/max endstops, axis_max is adjusted to the correct value
+          //if we only have min, we go from 0 -> predefined axis_max
+          //if we only have max, we go from 0 -> predefined axis_max
+          //the predefined axis_max are the travel distances in steps
+          if(endstop_break<0) //min is always 0
+            current_pos[-endstop_break-1]=0;
+          else //max
+            #if defined(ENDSTOPS_MIN) && defined(ENDSTOPS_MAX)
+              axis_max[endstop_break-1]=current_pos[endstop_break-1];
+            #else
+              current_pos[endstop_break-1]=axis_max[endstop_break-1];
+            #endif
+          ret=endstop_break;
+          goto movedone; //this is the proper use for goto
+        }
+      #endif
+
       unsigned long now=micros();
       float elapsed_t;
       if(now<start) //overflow in micros() after ~70 min
@@ -175,7 +320,9 @@ void move_axes(long displacement[n_motors]){
       }
       //delayMicroseconds(2000);
     }
-    EEPROM.put(0, current_pos);
+    movedone:
+      EEPROM.put(0, current_pos);
+      return ret;
 }
 
 #ifdef ADAFRUIT_TSL2591
