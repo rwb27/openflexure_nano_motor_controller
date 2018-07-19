@@ -3,23 +3,26 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Openflexure Stage's documentation!
+The OpenFlexure Stage module
 =============================================
 
-This module exposes the functions of the OpenFlexure Nano Motor Controller in a
+This module exposes the functions of the OpenFlexure Nano Motor Controller (AKA 
+the "Sangaboard")in a
 friendly Python class.  It allows the stage to be moved, as well as providing
-properties that allow it to be easily configured.  Various context managers and
+properties that allow it to be configured.  Various context managers and
 generator functions are provided to simplify opening/closing the hardware, and 
 common operations such as scanning through a list of points.
 
-There are two classes provided by this module; :class:`OpenFlexureStage` and 
-:class:`OpenFlexureStageWithLightSensor` depending on whether your stage is 
-set up to read a light sensor.
+All of the functionality is accessed through the :class:`OpenFlexureStage` class,
+which optionally includes a :class:`LightSensor` module if the firmware and 
+hardware are set up to include this.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   hardware
+   firmware
    API
 
 

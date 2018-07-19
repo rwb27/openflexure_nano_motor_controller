@@ -5,7 +5,6 @@ The top-level module simply includes the :class:`OpenFlexureStage` and :class:`O
 
 .. toctree::
    stage
-   light_sensor
    basic_serial_instrument
 
 .. automodule:: openflexure_stage

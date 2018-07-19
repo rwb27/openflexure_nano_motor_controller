@@ -1,7 +1,7 @@
 Stage module
 *****************
 
-The stage module defines the :class:`OpenFlexureStage`.
+The stage module defines the :class:`OpenFlexureStage` and the optional module :class:`LightSensor`.
 
 .. automodule:: openflexure_stage.stage
    :members:
