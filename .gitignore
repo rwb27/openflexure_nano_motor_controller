@@ -49,8 +49,7 @@ Temporary Items
 
 # Python stuff
 *.pyc
-*.egg_info
-openflexure_stage.egg_info/
+*.egg-info
 .installed.cfg
 bin
 develop-eggs
@@ -61,6 +60,11 @@ parts
 src/*.egg-info
 lib
 lib64
+build/
 
 #Editor backups
 *.backup
+
+
+# Sphinx documentation
+docs/_build/
