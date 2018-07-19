@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jun 19 11:42:15 2017
+This module defines a chopped-out class from 'nplab <http://www.github.com/nanophotonics/nplab>'_.
+It is a basic serial instrument class to simplify the process of interfacing with 
+equipment that talks on a serial port.  The idea is that your instrument can
+subclass :class:`BasicSerialInstrument` and provide methods to control the
+hardware, which will mostly consist of `self.query()` commands.
 
-This is a chopped-out class from nplab (http://www.github.com/nanophotonics/nplab)
+The :class:`QueriedProperty` class is a convenient shorthand to create a property
+that is read and/or set with a single serial query (i.e. a read followed by a write).
 
-It is a basic serial instrument class for things that talk on serial ports.
-
-@author: richard bowman (c) 2017, released under GNU GPL
+.. module_author: Richard Rowman (c) 2017, released under GNU GPL
 """
 
 import re
@@ -21,19 +24,17 @@ import io
 
 class BasicSerialInstrument(object):
     """
-    Basic Serial Instrument
-    ======================
-
     An instrument that communicates by sending strings back and forth over serial
 
     This base class provides commonly-used mechanisms that support the use of
     serial instruments.  Most interactions with this class involve
     a call to the `query` method.  This writes a message and returns the reply.
-    This has been hacked together from the nplab MEssageBusInstrument and SerialInstrument
+    This has been hacked together from the nplab_ MessageBusInstrument and SerialInstrument
     classes.
+
+    .. _nplab: https://github.com/nanophotonics/nplab/
     
-    Threading Notes
-    ---------------
+    **Threading Notes**
     
     The message bus protocol includes a property, `communications_lock`.  All
     commands that use the communications bus should be protected by this lock.
@@ -301,15 +302,24 @@ class QueriedProperty(object):
     its value.
     
     Arguments:
-    get_cmd: the string sent to the instrument to obtain the value
-    set_cmd: the string used to set the value (use {} or % placeholders)
-    validate: a list of allowable values
-    valrange: a maximum and minimum value
-    fdel: a function to call when it's deleted
-    doc: the docstring
-    response_string: supply a % code (as you would for response_string in a
+
+    :get_cmd:
+        the string sent to the instrument to obtain the value
+    :set_cmd:
+        the string used to set the value (use {} or % placeholders)
+    :validate:
+        a list of allowable values
+    :valrange:
+        a maximum and minimum value
+    :fdel:
+        a function to call when it's deleted
+    :doc:
+        the docstring
+    :response_string:
+        supply a % code (as you would for response_string in a
         ``BasicSerialInstrument.parsed_query``)
-    ack_writes: set to "readline" to discard a line of input after writing.
+    :ack_writes:
+        set to "readline" to discard a line of input after writing.
     """
     def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
                  fdel=None, doc=None, response_string=None, ack_writes="no"):

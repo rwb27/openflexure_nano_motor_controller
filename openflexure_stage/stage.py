@@ -13,15 +13,44 @@ from basic_serial_instrument import BasicSerialInstrument, QueriedProperty, EIGH
 import numpy as np
 
 class OpenFlexureStage(BasicSerialInstrument):
+    """Class managing serial communications with an Openflexure Motor Controller
+    
+    The `OpenFlexureStage` class handles setting up communications with the stage,
+    wraps the various serial commands in Python methods, and provides iterators and
+    context managers to simplify opening/closing the hardware connection and some
+    other tasks like conducting a linear scan.
+
+    Arguments to the constructor are passed to the constructor of
+    :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
+    most likely the only one necessary is `port` which should be set to the serial port
+    you will use to communicate with the motor controller.
+    """
     port_settings = {'baudrate':115200, 'bytesize':EIGHTBITS, 'parity':PARITY_NONE, 'stopbits':STOPBITS_ONE}
     # position, step time and ramp time are get/set using simple serial
     # commands.
-    position = QueriedProperty(get_cmd="p?", response_string=r"%d %d %d")
-    step_time = QueriedProperty(get_cmd="dt?", set_cmd="dt %d", response_string="minimum step delay %d")
-    ramp_time = QueriedProperty(get_cmd="ramp_time?", set_cmd="ramp_time %d", response_string="ramp time %d")
+    position = QueriedProperty(get_cmd="p?", response_string=r"%d %d %d", 
+            doc="Get the position of the stage as a tuple of 3 integers.")
+    step_time = QueriedProperty(get_cmd="dt?", set_cmd="dt %d", response_string="minimum step delay %d", 
+            doc="Get or set the minimum time between steps of the motors in microseconds.\n\n"
+                "The step time is ``1000000/max speed`` in steps/second.  It is saved to EEPROM on "
+                "the Arduino, so it will be persistent even if the motor controller is turned off.")
+    ramp_time = QueriedProperty(get_cmd="ramp_time?", set_cmd="ramp_time %d", response_string="ramp time %d",
+            doc="Get or set the acceleration time in microseconds.\n\n"
+                "The stage will accelerate/decelerate between stationary and maximum speed over `ramp_time` "
+                "microseconds.  Zero means the stage runs at full speed initially, with no accleration "
+                "control.  Small moves may last less than `2*ramp_time`, in which case the acceleration "
+                "will be the same, but the stage will never reach full speed.  It is saved to EEPROM on "
+                "the Arduino, so it will be persistent even if the motor controller is turned off.")
     axis_names = ('x', 'y', 'z')
 
     def __init__(self, *args, **kwargs):
+        """Create a stage object.
+        
+        Arguments are passed to the constructor of
+        :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
+        most likely the only one necessary is `port` which should be set to the serial port
+        you will use to communicate with the motor controller.
+        """
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
         assert self.readline().startswith("OpenFlexure Motor Board v0.3")
         time.sleep(2)
@@ -34,6 +63,23 @@ class OpenFlexureStage(BasicSerialInstrument):
     _backlash = None
     @property
     def backlash(self):
+        """The distance used for backlash compensation.
+
+        Software backlash compensation is enabled by setting this property to a value
+        other than `None`.  The value can either be an array-like object (list, tuple,
+        or numpy array) with one element for each axis, or a single integer if all axes
+        are the same.
+
+        The property will always return an array with the same length as the number of
+        axes.
+
+        The backlash compensation algorithm is fairly basic - it ensures that we always
+        approach a point from the same direction.  For each axis that's moving, the 
+        direction of motion is compared with ``backlash``.  If the direction is opposite,
+        then the stage will overshoot by the amount in ``-backlash[i]`` and then move
+        back by ``backlash[i]``.  This is computed per-axis, so if some axes are moving
+        in the same direction as ``backlash``, they won't do two moves.
+        """
         return self._backlash
 
     @backlash.setter
@@ -211,6 +257,4 @@ if __name__ == "__main__":
         newpos = np.array([np.cos(a), np.sin(a), 0]) * radius
         displacement = newpos - oldpos
         s.move_rel(list(displacement))
-    
-
     s.close()
