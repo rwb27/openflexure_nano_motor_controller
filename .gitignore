@@ -48,9 +48,7 @@ Temporary Items
 
 # Python stuff
 *.pyc
-*.egg_info
-openflexure_stage.egg_info
-openflexure_stage.egg_info/**
+*.egg-info
 .installed.cfg
 bin
 develop-eggs
