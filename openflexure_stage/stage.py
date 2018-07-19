@@ -259,11 +259,11 @@ class LightSensor(OptionalModule):
     valid_gains = None
     _valid_gains_int = None
     integration_time = QueriedProperty(get_cmd="light_sensor_integration_time?", 
-	                                   set_cmd="light_sensor_integration_time %d", 
-									   response_string="light sensor integration time %d ms",
-									   doc="Get or set the integration time of the light sensor in milliseconds.")
+                                       set_cmd="light_sensor_integration_time %d", 
+                                       response_string="light sensor integration time %d ms",
+                                       doc="Get or set the integration time of the light sensor in milliseconds.")
     intensity = QueriedProperty(get_cmd="light_sensor_intensity?", response_string="%d",
-	                            doc="Read the current intensity measured by the light sensor (arbitrary units).")
+                                doc="Read the current intensity measured by the light sensor (arbitrary units).")
 
     def __init__(self,available,parent=None,model="Generic"):
         super(LightSensor, self).__init__(available,parent=parent,module_type="LightSensor",model=model)
@@ -274,8 +274,8 @@ class LightSensor(OptionalModule):
     @property
     def gain(self):
         """"Get or set the current gain value of the light sensor.
-		
-		Valid gain values are defined in the `valid_gains` property, and should be floating-point numbers."""
+        
+        Valid gain values are defined in the `valid_gains` property, and should be floating-point numbers."""
         self.confirm_available()
         gain = self._parent.query('light_sensor_gain?')
         M = re.search('[0-9\.]+(?=x)',gain)
@@ -304,12 +304,12 @@ class LightSensor(OptionalModule):
         gains = self._parent.query('light_sensor_gain_values?')
         try:
             M = re.findall('[0-9\.]+(?=x)',gains)
-			return [float(gain) for gain in M] 
+            return [float(gain) for gain in M]
         except:
-		    # Fall back to strings if we don't get floats (unlikely)
-		    gain_strings = gains[20:].split(", ")
+            # Fall back to strings if we don't get floats (unlikely)
+            gain_strings = gains[20:].split(", ")
             return gain_strings
-		
+        
 
 
 

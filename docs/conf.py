@@ -48,8 +48,15 @@ version = find_version()
 # ones.
 extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx']
+    'sphinx.ext.intersphinx',
+    'sphinxcontrib.apidoc'
+    ]
 
+apidoc_module_dir = '../openflexure_stage'
+apidoc_output_dir = 'API'
+apidoc_excluded_paths = []
+apidoc_separate_modules = True
+    
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module defines a chopped-out class from 'nplab <http://www.github.com/nanophotonics/nplab>'_.
+This module defines a chopped-out class from nplab_.
 It is a basic serial instrument class to simplify the process of interfacing with 
 equipment that talks on a serial port.  The idea is that your instrument can
 subclass :class:`BasicSerialInstrument` and provide methods to control the
@@ -10,6 +10,7 @@ The :class:`QueriedProperty` class is a convenient shorthand to create a propert
 that is read and/or set with a single serial query (i.e. a read followed by a write).
 
 .. module_author: Richard Rowman (c) 2017, released under GNU GPL
+.. _nplab: http://www.github.com/nanophotonics/nplab
 """
 
 from __future__ import print_function, division
@@ -34,8 +35,6 @@ class BasicSerialInstrument(object):
     a call to the `query` method.  This writes a message and returns the reply.
     This has been hacked together from the nplab_ MessageBusInstrument and SerialInstrument
     classes.
-
-    .. _nplab: https://github.com/nanophotonics/nplab/
     
     **Threading Notes**
     
@@ -308,9 +307,11 @@ class BasicSerialInstrument(object):
                 return None
     
 class OptionalModule(object):
-    """Class for defining usse in in BasicSerialInstrument. This is designed as a base class
+    """This allows a `BasicSerialInstrument` to have optional features.
+
+    OptionalModule is designed as a base class
     for interfacing with optional modules which may or may not be included with
-    the serial instrument.
+    the serial instrument, and can be added or removed at run-time.
     """
     
     def __init__(self,available,parent=None,module_type="Undefined",model="Generic"):
@@ -344,7 +345,12 @@ class QueriedProperty(object):
     This returns a property-like (i.e. a descriptor) object.  You can use it
     in a class definition just like a property.  The property it creates will
     interact with the instrument over the communication bus to set and retrieve
-    its value.
+    its value.  It uses calls to `BasicSerialInstrument.parsed_query` to set or
+    get the value of the property.
+    
+    `QueriedProperty` can be used to define properties on a `BasicSerialInstrument`
+    or an `OptionalModule` (in which case the `BasicSerialInstrument.parsed_query`
+    method of the parent object will be used).
     
     Arguments:
 

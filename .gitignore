@@ -68,3 +68,4 @@ build/
 
 # Sphinx documentation
 docs/_build/
+docs/API/*

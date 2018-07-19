@@ -23,7 +23,9 @@ hardware are set up to include this.
 
    hardware
    firmware
-   API
+   API/modules.rst
+   
+.. automodule:: openflexure_stage
 
 
 Indices and tables
