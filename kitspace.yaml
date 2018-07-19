@@ -1,3 +1,3 @@
-gerbers: sangaboard_v0.2/sangaBoard_v0.2 gerber
-bom: sangaboard_v0.2/1-click-bom.tsv
+gerbers: pcb_design/gerbers
+bom: pcb_design/1-click-bom.tsv
 site: https://docubricks.com/viewer.jsp?id=9134926926759813120
