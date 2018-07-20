@@ -40,7 +40,8 @@ setup(name = 'openflexure_stage',
           ],
       install_requires = [
           'pyserial',
-          'future'
+          'future',
+          'numpy',
           ],
       # TODO: add build requires for sphinx, sphinxcontrib-apidoc
       )
