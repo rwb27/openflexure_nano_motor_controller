@@ -29,8 +29,18 @@ class OpenFlexureStage(BasicSerialInstrument):
     :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
     most likely the only one necessary is `port` which should be set to the serial port
     you will use to communicate with the motor controller.
+    
+    This class can be used as a context manager, i.e. it's encouraged to use it as::
+       
+       with OpenFlexureStage() as stage:
+           stage.move_rel([1000,0,0])
+    
+    In that case, the serial port will automatically be closed at the end of the block,
+    even if an error occurs.  Otherwise, be sure to call the 
+    :meth:`~.BasicSerialInstrument.close()` method to release the serial port.
     """
     port_settings = {'baudrate':115200, 'bytesize':EIGHTBITS, 'parity':PARITY_NONE, 'stopbits':STOPBITS_ONE}
+    """These are the settings for the stage's serial port, and can usually be left as default."""
     # position, step time and ramp time are get/set using simple serial
     # commands.
     position = QueriedProperty(get_cmd="p?", response_string=r"%d %d %d", 
@@ -47,8 +57,11 @@ class OpenFlexureStage(BasicSerialInstrument):
                 "will be the same, but the stage will never reach full speed.  It is saved to EEPROM on "
                 "the Arduino, so it will be persistent even if the motor controller is turned off.")
     axis_names = ('x', 'y', 'z')
+    """The names of the stage's axes.  NB this also defines the number of axes."""
     board = None
+    """Once initialised, `board` is a string that identifies the firmware version."""
     supported_light_sensors = ["TSL2591","ADS1115"]
+    """This is a list of the supported light sensor module types."""
 
 
     def __init__(self, *args, **kwargs):
@@ -57,7 +70,8 @@ class OpenFlexureStage(BasicSerialInstrument):
         Arguments are passed to the constructor of
         :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
         most likely the only one necessary is `port` which should be set to the serial port
-        you will use to communicate with the motor controller.
+        you will use to communicate with the motor controller.  That's the first argument so
+        it doesn't need to be named.
         """
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
         self.board =  self.readline(timeout=1).rstrip()

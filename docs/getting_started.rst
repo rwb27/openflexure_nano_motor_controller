@@ -1,6 +1,6 @@
 Getting started
 =================
-To use the motor controller from Python, you will first need to install this module.  It can be installed using `pip` in the usual way, which will also require the packages that it depends on (`future` and :mod:`pyserial`).  The simplest way to use the module is this::
+To use the motor controller from Python, you will first need to install this module.  It can be installed using `pip` in the usual way, which will also require the packages that it depends on (:mod:`future` and :mod:`pyserial`).  The simplest way to use the module is this::
 
    from openflexure_stage import OpenFlexureStage
    with OpenFlexureStage() as stage:
@@ -12,13 +12,13 @@ By default, it will use the first available serial port - if you are using a Ras
 
    OpenFlexureStage("/dev/ttyUSB0")
    
-The name of the serial port will depend on your operating system - Linux typically assigns names that look like `/dev/ttyUSB0` while Windows will often give it a name like `COM4`.
+The name of the serial port will depend on your operating system - Linux typically assigns names that look like ``/dev/ttyUSB0`` while Windows will often give it a name like ``COM4``.
 
 Make sure you close the stage after you're finished with it - the best way to do this is using a `with` block, but you can also call :meth:`~.BasicSerialInstrument.close` manually if required.
 
 Moving the stage
 -----------------
-The most basic thing you are likely to want to do with the stage.  This is done with the :meth:`~.OpenFlexureStage.move_rel` most of the time, though it's also possible to make absolute moves.  The Sangaboard keeps track of position in firmware, and will return its position if you query :attr:`~.OpenFlexureStage.position`.
+The most basic thing you are likely to want to do with the stage.  This is done with :meth:`~.OpenFlexureStage.move_rel` most of the time, though it's also possible to make absolute moves.  The Sangaboard keeps track of position in firmware, and will return its position if you query :attr:`~.OpenFlexureStage.position`.
 
 Adjusting settings
 --------------------
