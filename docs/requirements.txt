@@ -1,0 +1,4 @@
+pyserial
+future
+sphinx
+sphinxcontrib-apidoc
