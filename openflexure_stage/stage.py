@@ -256,6 +256,13 @@ class OpenFlexureStage(BasicSerialInstrument):
         print(self.query("help",multiline=True,termination_line="--END--\r\n"))
 
 class LightSensor(OptionalModule):
+    """An optional module giving access to the light sensor.
+    
+    If a light sensor is enabled in the motor controller's firmware, then
+    the :class:`openflexure_stage.OpenFlexureStage` will gain an optional
+    module which is an instance of this class.  It can be used to access
+    the light sensor (usually via the I2C bus).
+    """
     valid_gains = None
     _valid_gains_int = None
     integration_time = QueriedProperty(get_cmd="light_sensor_integration_time?", 
