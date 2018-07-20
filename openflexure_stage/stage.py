@@ -74,22 +74,28 @@ class OpenFlexureStage(BasicSerialInstrument):
         it doesn't need to be named.
         """
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
-        self.board =  self.readline(timeout=1).rstrip()
-        assert self.board.startswith("OpenFlexure Motor Board v0.3"), "Version string \"{}\" not recognised.".format(self.board)
+        try:
+            self.board =  self.readline(timeout=1).rstrip()
+            assert self.board.startswith("OpenFlexure Motor Board v0.3"), "Version string \"{}\" not recognised.".format(self.board)
 
-        #Bit messy: Defining all valid modules as not available, then overwriting with available information if available.
-        self.light_sensor=LightSensor(False)
+            #Bit messy: Defining all valid modules as not available, then overwriting with available information if available.
+            self.light_sensor = LightSensor(False)
 
-        for module in self.list_modules():
-            module_type=module.split(':')[0].strip()
-            module_model=module.split(':')[1].strip()
-            if module_type.startswith('Light Sensor'):
-                if module_model in self.supported_light_sensors:
-                    self.light_sensor = LightSensor(True,parent=self,model=module_model)
+            for module in self.list_modules():
+                module_type=module.split(':')[0].strip()
+                module_model=module.split(':')[1].strip()
+                if module_type.startswith('Light Sensor'):
+                    if module_model in self.supported_light_sensors:
+                        self.light_sensor = LightSensor(True,parent=self,model=module_model)
+                    else:
+                        warnings.warn("Light sensor model \"%s\" not recognised."%(module_model),RuntimeWarning)
                 else:
-                    warnings.warn("Light sensor model \"%s\" not recognised."%(module_model),RuntimeWarning)
-            else:
-                warnings.warn("Module type \"%s\" not recognised."%(module_type),RuntimeWarning)
+                    warnings.warn("Module type \"%s\" not recognised."%(module_type),RuntimeWarning)
+        except Exception as e:
+            # If an error occurred while setting up (e.g. because the board isn't connected or something)
+            # make sure we close the serial port cleanly (otherwise it hangs open).
+            self.close()
+            raise e
 
     @property
     def n_axes(self):
@@ -261,12 +267,15 @@ class OpenFlexureStage(BasicSerialInstrument):
         return BasicSerialInstrument.query(self, message, *args, **kwargs)
 
     def list_modules(self):
-        """ List all modules in form:
-        Module Name: Model"""
+        """Return a list of strings detailing optional modules.
+        
+        Each module will correspond to a string of the form ``Module Name: Model``
+        """
         modules =  self.query("list_modules",multiline=True,termination_line="--END--\r\n").split('\r\n')[:-2]
         return [str(module) for module in modules]
 
     def print_help(self):
+        """Print the stage's built-in help message."""
         print(self.query("help",multiline=True,termination_line="--END--\r\n"))
 
 class LightSensor(OptionalModule):

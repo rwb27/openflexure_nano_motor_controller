@@ -17,7 +17,7 @@
 
 // LIGHT SENSOR SUPPORT
 // Uncomment (exactly) one of the lines below to enable support for that sensor.
-#define ADAFRUIT_TSL2591
+//#define ADAFRUIT_TSL2591
 //#define ADAFRUIT_ADS1115
 
 #ifdef ADAFRUIT_TSL2591
@@ -88,9 +88,8 @@ void setup() {
   }
   #ifdef LIGHT_SENSOR
   setup_light_sensor();
-  #else
-  Serial.println(F(VER_STRING));
   #endif /* LIGHT_SENSOR */
+  Serial.println(F(VER_STRING));
   
 }
 
@@ -186,7 +185,6 @@ void setup_light_sensor(){
   {
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
-    Serial.println(F(VER_STRING));
   } 
   else 
   {
@@ -262,7 +260,6 @@ Adafruit_ADS1115 ads; // pass in a number for the sensor identifier (for your us
 void setup_light_sensor(){
   ads.begin();
   ads.setGain(GAIN_ONE);
-  Serial.println(F(VER_STRING));
 }
 
 void print_light_sensor_gain(){
