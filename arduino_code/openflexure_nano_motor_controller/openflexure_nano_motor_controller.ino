@@ -7,7 +7,7 @@
  * Based on code written by Fergus Riche, 2015
  * For use with the 3D printed microscope:
  * https://github.com/rwb27/openflexure_microscope/
- * 
+ *
  * (c) Richard Bowman & James Sharkey, Released under GPL v3, 2017
  */
 #include "StepperF_alt.h"   //Fergus's hacked stepper library
@@ -42,9 +42,10 @@
 //#define ENDSTOPS_MAX
 
 #if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
+  #define EEPROM_AMAX_OFFSET 20
   //endstops are closed when the pin is down  by default, this inverts the behaviour
   #define ENDSTOPS_INVERT false
-  
+
   #define ENDSTOPS_PULLUPS true
 
   //soft endstops trigger when 0/MAX is reached in the direction without endstops
@@ -53,7 +54,7 @@
   //endstops wiring and positions
   const int endstops_min[]={A0,A1,A2};
   //const int endstops_max[]={A0,A1,A2};
-  const long axis_max[]={30000,2000,30000}; //TODO calculate/measure
+  long axis_max[]={30000,2000,30000}; //TODO calculate/measure
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
@@ -87,12 +88,12 @@ int command_prefix(String command, const char ** prefixes, int n_prefixes){
 void setup() {
   // initialise serial port
   Serial.begin(115200);
-  
+
   // get the stepoper objects from the motor shield objects
   motors[0] = new Stepper(8, 13, 12, 11, 10);
   motors[1] = new Stepper(8, 9, 8, 7, 6);
   motors[2] = new Stepper(8, 5, 4, 3, 2);
-  
+
   EACH_MOTOR{
     motors[i]->setSpeed(1*8.0/4096.0); //using Fergus's speed for now, though this is ignored...
     steps_remaining[i]=0;
@@ -103,18 +104,24 @@ void setup() {
   EEPROM.get(min_step_delay_eeprom, min_step_delay);
   if(min_step_delay < 0){ // -1 seems to be what we get if it's uninitialised.
     min_step_delay = 1000;
-    EEPROM.put(min_step_delay_eeprom, min_step_delay); 
+    EEPROM.put(min_step_delay_eeprom, min_step_delay);
   }
   EEPROM.get(ramp_time_eeprom, ramp_time);
   if(ramp_time < 0){ // -1 seems to be what we get if it's uninitialised.
     ramp_time = 0;
-    EEPROM.put(ramp_time_eeprom, ramp_time); 
+    EEPROM.put(ramp_time_eeprom, ramp_time);
   }
   #ifdef LIGHT_SENSOR
   setup_light_sensor();
   #else
   Serial.println(F(VER_STRING));
   #endif /* LIGHT_SENSOR */
+
+  #ifdef defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
+    EACH_MOTOR{
+      EEPROM.get(EEPROM_AMAX_OFFSET+i*sizeof(long),axis_max[i]);
+    }
+  #endif
 
   #ifdef ENDSTOPS_MIN
     EACH_MOTOR{
@@ -133,8 +140,30 @@ void setup() {
         pinMode(endstops_max[i], INPUT);
     }
   #endif
-  
+
 }
+
+
+void stepMotor(int motor, long dx){
+  //make a single step of a single motor.
+  current_pos[motor] += dx;
+  motors[motor]->stepMotor(((current_pos[motor] % 8) + 8) % 8); //forgive the double-modulo; I need 0-7 even for -ve numbers
+}
+
+void releaseMotor(int motor){
+  //release the stepper motor (de-enegrise the coils)
+  motors[motor]->stepMotor(8);
+}
+
+void print_position(){
+  EACH_MOTOR{
+    if(i>0) Serial.print(" ");
+    Serial.print(current_pos[i]);
+  }
+  Serial.println();
+}
+
+#if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
 
 /**
 * Check if endstop is triggered, direction {-1,+1} for {min,max} endstop
@@ -164,33 +193,34 @@ boolean endstopTriggered(int axis, int direction){
   return false;
 }
 
-void stepMotor(int motor, long dx){
-  //make a single step of a single motor.  
-  current_pos[motor] += dx;
-  motors[motor]->stepMotor(((current_pos[motor] % 8) + 8) % 8); //forgive the double-modulo; I need 0-7 even for -ve numbers
-}
-
-void releaseMotor(int motor){
-  //release the stepper motor (de-enegrise the coils)
-  motors[motor]->stepMotor(8);
-}
-
-void print_position(){
-  EACH_MOTOR{
+void print_endstops_status(){
+   EACH_MOTOR{
     if(i>0) Serial.print(" ");
-    Serial.print(current_pos[i]);
+      if(endstopTriggered(i,-1))
+        Serial.print("-1");
+      else if(endstopTriggered(i,1))
+        Serial.print("1");
+      else
+    Serial.print("0");
   }
   Serial.println();
 }
 
-//TODO: test
+void print_axes_max(){
+  EACH_MOTOR{
+    if(i>0) Serial.print(" ");
+    Serial.print(axis_max[i]);
+  }
+  Serial.println();
+}
+
 void home_all(){
   #ifdef ENDSTOPS_MIN
     int hit=0;
-    int shift=10;
-    long displ[]={-150000,-150000,-150000};
+    int shift=900;//this should be enough to open the endstop+a few steps
+    long displ[]={-500000,-500000,-500000};
     //home all 3 axes
-    for(int i=0;i<3;i++){
+    EACH_MOTOR{
       hit=move_axes(displ);
       //avoid multiple shifts back
       for(char j=0;j<3;j++)
@@ -198,38 +228,54 @@ void home_all(){
           displ[j]=0;
       displ[-hit-1]=shift;
     }
-    //now we should be <shift> steps away in all axes, go slowly back for maximum accuracy
+
+    move_axes(displ);
+    //now we should be <shift> steps away in all axes, first shift a bit closer
+    //as the close and open positions some distance (~700 steps) apart, then go
+    //slowly back for maximum accuracy
+    long shift_back[]={-shift/2,-shift/2,-shift/2};
+    move_axes(shift_back);
+    delay(100);
     EACH_MOTOR{
+      if(i>0) break;
       while(!endstopTriggered(i,-1)){
         stepMotor(i,-1);
-        delayMicroseconds(50000);
+        delayMicroseconds(300000);
       }
       current_pos[i]=0;
     }
   #endif
 
   #ifdef ENDSTOPS_MAX
+    //same as above
     int hit=0;
-    int shift=10;
+    int shift=900;
     long displ[]={150000,150000,150000};
     //home all 3 axes
-    for(int i=0;i<3;i++){
+    EACH_MOTOR{
       hit=move_axes(displ);
       for(char j=0;j<3;j++)
         if(displ[j]==-shift)
           displ[j]=0;
       displ[-hit-1]=-shift;
     }
-    
+    move_axes(displ);
+    long shift_forw[]= {shift/2,shift/2,shift/2};
+    move_axes(shift_forw);
+
     EACH_MOTOR{
       while(!endstopTriggered(i,1)){
         stepMotor(i,1);
-        delayMicroseconds(50000);
+        delayMicroseconds(300000);
       }
       axis_max[i]=current_pos[i];
     }
+    EEPROM.put(EEPROM_AMAX_OFFSET, axis_max);
   #endif
 }
+
+
+#endif //ENDSTOPS
 
 int move_axes(long displacement[n_motors]){
   // move all the axes in a nice move
@@ -298,7 +344,7 @@ int move_axes(long displacement[n_motors]){
         float remaining_t = final_scaled_t + ramp_time - elapsed_t;
         if(elapsed_t < ramp_time && remaining_t > elapsed_t){ //for the first ramp_time, gradually accelerate
           scaled_t = elapsed_t*elapsed_t/(2*ramp_time);
-        }else if(remaining_t < ramp_time){ 
+        }else if(remaining_t < ramp_time){
           scaled_t = final_scaled_t - remaining_t*remaining_t/(2*ramp_time);
         }else{
           scaled_t = elapsed_t - ramp_time/2;
@@ -310,7 +356,7 @@ int move_axes(long displacement[n_motors]){
       EACH_MOTOR{
         if(distance_moved[i] < displacement[i]){
           finished = false; //only if all axes are done are we truly finished.
-          
+
           // check if it's time to take another step and move if needed.
           if(scaled_t > ((float)distance_moved[i] + 0.5) * step_delay[i]){
             stepMotor(i, dir[i]);
@@ -329,13 +375,13 @@ int move_axes(long displacement[n_motors]){
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
 
 void setup_light_sensor(){
-  if (tsl.begin()) 
+  if (tsl.begin())
   {
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
     Serial.println(F(VER_STRING));
-  } 
-  else 
+  }
+  else
   {
     Serial.println(F("No light sensor found.  NB your board will start up faster if you recompile without light sensor support."));
   }
@@ -391,7 +437,7 @@ void set_light_sensor_gain(int newgain){
 void print_light_sensor_integration_time(){
   // Print the current integration time in milliseconds.
   Serial.print  (F("light sensor integration time "));
-  Serial.print((tsl.getTiming() + 1) * 100, DEC); 
+  Serial.print((tsl.getTiming() + 1) * 100, DEC);
   Serial.println(F(" ms"));
 }
 
@@ -513,6 +559,16 @@ void loop() {
       #elif defined ADAFRUIT_ADS1115
       Serial.println(F("Light Sensor: ADS1115"));
       #endif
+      #if defined(ENDSTOPS_MIN)||defined(ENDSTOPS_MAX)
+      Serial.print("Endstops:");
+      #ifdef ENDSTOPS_MIN
+        Serial.print(" min");
+      #endif
+      #ifdef ENDSTOPS_MAX
+        Serial.print(" max");
+      #endif
+        Serial.println();
+      #endif
       Serial.println("--END--");
       return;
     }
@@ -607,6 +663,32 @@ void loop() {
       return;
     }
     #endif //LIGHT_SENSOR
+    #if defined(ENDSTOPS_MIN)||defined(ENDSTOPS_MAX)
+    if(command.startsWith("endstops?")){
+       print_endstops_status();
+       return;
+    }
+    if(command.startsWith("home")){
+      home_all();
+      return;
+    }
+    if(command.startsWith("max_p?")){
+      print_axes_max();
+      return;
+    }
+    if(command.startsWith("max ")){
+      int s2;
+      int s1=command.indexOf(" ",4);
+      axis_max[0]=command.substring(4,s1).toInt();
+      s2=command.indexOf(" ", s1+1);
+      axis_max[1]=command.substring(s1,s2).toInt();
+      axis_max[2]=command.substring(s2).toInt();
+      EEPROM.put(EEPROM_AMAX_OFFSET, axis_max);
+      Serial.println("done");
+      return;
+    }
+
+    #endif //ENDSTOPS
     if(command.startsWith("help")){
       Serial.println("");
       Serial.println(F(VER_STRING));
@@ -615,6 +697,13 @@ void loop() {
       #elif defined ADAFRUIT_ADS1115
       Serial.println(F("Compiled with Adafruit ADS1115 support"));
       #endif
+      #ifdef ENDSTOPS_MIN
+        Serial.println(F("Compiled with min endstops support"));
+      #endif
+      #ifdef ENDSTOPS_MAX
+        Serial.println(F("Compiled with max endstops support"));
+      #endif
+
       Serial.println("");
       Serial.println(F("Commands (terminated by a newline character):"));
       Serial.println(F("mrx <d>                        - relative move in x"));
@@ -636,6 +725,12 @@ void loop() {
       Serial.println(F("light_sensor_integration_time? - get the integration time in milliseconds"));
       Serial.println(F("light_sensor_intensity?        - read the current value from the full spectrum diode"));
       #endif //LIGHT_SENSOR
+
+      #if defined(ENDSTOPS_MIN)||defined(ENDSTOPS_MAX)
+      Serial.println(F("endstops?                      - get triggered endstops in (1,0,-1) format for max, none, min"));
+      Serial.println(F("home                           - home all axes (touches all physical endstops"));
+      Serial.println(F("max_p?                         - return positions of max endstops"));
+      #endif
       Serial.println("");
       Serial.println("Input Key:");
       Serial.println(F("<d>                            - a decimal integer."));
