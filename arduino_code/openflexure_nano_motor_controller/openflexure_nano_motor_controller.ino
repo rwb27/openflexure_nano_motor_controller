@@ -32,6 +32,15 @@
 #define LIGHT_SENSOR
 #endif
 
+//debug serial prints
+#define DEBUG_ON
+
+#ifdef DEBUG_ON
+  #define DEBUG(x)  Serial.println (x)
+#else
+  #define DEBUG(x)  
+#endif
+
 
 /*
  ************
@@ -42,7 +51,6 @@
 //#define ENDSTOPS_MAX
 
 #if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
-  #define EEPROM_AMAX_OFFSET 20
   //endstops are closed when the pin is down  by default, this inverts the behaviour
   #define ENDSTOPS_INVERT false
 
@@ -54,7 +62,7 @@
   //endstops wiring and positions
   const int endstops_min[]={A0,A1,A2};
   //const int endstops_max[]={A0,A1,A2};
-  long axis_max[]={30000,2000,30000}; //TODO calculate/measure
+  long axis_max[3]; //TODO calculate/measure
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
@@ -66,6 +74,7 @@ long min_step_delay;
 const int min_step_delay_eeprom = sizeof(long)*n_motors;
 long ramp_time;
 const int ramp_time_eeprom = sizeof(long)*(n_motors+1);
+const int axis_max_eeprom = sizeof(long)*(n_motors+2);
 Stepper* motors[n_motors];
 signed long current_pos[n_motors];
 long steps_remaining[n_motors];
@@ -117,9 +126,9 @@ void setup() {
   Serial.println(F(VER_STRING));
   #endif /* LIGHT_SENSOR */
 
-  #ifdef defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
+  #if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
     EACH_MOTOR{
-      EEPROM.get(EEPROM_AMAX_OFFSET+i*sizeof(long),axis_max[i]);
+      EEPROM.get(axis_max_eeprom+i*sizeof(long), axis_max[i]);
     }
   #endif
 
@@ -170,24 +179,24 @@ void print_position(){
 */
 boolean endstopTriggered(int axis, int direction){
 #if defined(ENDSTOPS_MIN)
-    if(direction==-1){
+    if(direction<0){
       int value=analogRead(endstops_min[axis]);
       if(ENDSTOPS_INVERT!=(value<100))
         return true;
     }
 #elif defined(SOFT_ENDSTOPS)
-    if(direction==-1 && current_pos[axis]<1)
+    if(direction<0 && current_pos[axis]<1)
         return true;
 #endif
 
 #if defined(ENDSTOPS_MAX)
-  if(direction==1){
+  if(direction>0){
       int value=analogRead(endstops_max[axis]);
       if(ENDSTOPS_INVERT!=(value<100))
         return true;
   }
 #elif defined(SOFT_ENDSTOPS)
-  if(direction==1 && current_pos[axis]>=axis_max[axis])
+  if(direction>0 && current_pos[axis]>=axis_max[axis])
     return true;
 #endif
   return false;
@@ -217,75 +226,73 @@ void print_axes_max(){
 void home_all(){
   #ifdef ENDSTOPS_MIN
     int hit=0;
-    int shift=900;//this should be enough to open the endstop+a few steps
-    long displ[]={-500000,-500000,-500000};
+    long shift_min[]={3000,3000,3000};//this should be enough to open the endstop+a few steps
     //home all 3 axes
+    long displ[]={-100000,-100000,-100000};
     EACH_MOTOR{
       hit=move_axes(displ);
-      //avoid multiple shifts back
-      for(char j=0;j<3;j++)
-        if(displ[j]==shift)
-          displ[j]=0;
-      displ[-hit-1]=shift;
+      displ[-hit-1]=0;
     }
-
-    move_axes(displ);
+    move_axes(shift_min);
     //now we should be <shift> steps away in all axes, first shift a bit closer
     //as the close and open positions some distance (~700 steps) apart, then go
     //slowly back for maximum accuracy
-    long shift_back[]={-shift/2,-shift/2,-shift/2};
+    long shift_back[]={-shift_min[0]/2,-shift_min[1]/2,-shift_min[2]/2};
     move_axes(shift_back);
     delay(100);
     EACH_MOTOR{
-      if(i>0) break;
       while(!endstopTriggered(i,-1)){
         stepMotor(i,-1);
-        delayMicroseconds(300000);
+        delay(150);
       }
       current_pos[i]=0;
     }
+    EEPROM.put(0, current_pos);
+    //move a little higher so the endstops are released
+    move_axes(shift_min);
   #endif
 
+  //TODO: this part was not tested
   #ifdef ENDSTOPS_MAX
     //same as above
     int hit=0;
-    int shift=900;
+    long shift_max[]={-2000,-2000,-2000};
     long displ[]={150000,150000,150000};
     //home all 3 axes
     EACH_MOTOR{
       hit=move_axes(displ);
-      for(char j=0;j<3;j++)
-        if(displ[j]==-shift)
-          displ[j]=0;
-      displ[-hit-1]=-shift;
+      displ[hit-1]=0;
     }
-    move_axes(displ);
-    long shift_forw[]= {shift/2,shift/2,shift/2};
+    move_axes(shift_max);
+    long shift_forw[]= {shift_max[0]/2,shift_max[1]/2,shift_max[2]/2};
     move_axes(shift_forw);
 
     EACH_MOTOR{
       while(!endstopTriggered(i,1)){
         stepMotor(i,1);
-        delayMicroseconds(300000);
+        delay(150);
       }
       axis_max[i]=current_pos[i];
     }
-    EEPROM.put(EEPROM_AMAX_OFFSET, axis_max);
+    EEPROM.put(0, current_pos);
+    EEPROM.put(axis_max_eeprom, axis_max);
   #endif
 }
 
 
 #endif //ENDSTOPS
 
-int move_axes(long displacement[n_motors]){
+
+int move_axes(long displ[n_motors]){
+   long displacement[n_motors];
   // move all the axes in a nice move
   // split displacements into magnitude and direction, and find max. travel
     int ret=0;
     long max_steps = 0;
     long dir[n_motors];
     EACH_MOTOR{
-      dir[i] = displacement[i] > 0 ? 1 : -1;
-      displacement [i] *= dir[i];
+      dir[i] = displ[i] > 0 ? 1 : -1;
+      displacement [i] = displ[i]*dir[i];
       if(displacement[i]>max_steps) max_steps=displacement[i];
     }
     // scale the step delays so the move goes in a straight line, with >=1 motor
@@ -306,7 +313,7 @@ int move_axes(long displacement[n_motors]){
       #if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
         int endstop_break=0;
         EACH_MOTOR{
-          if(endstopTriggered(i,dir[i]))
+          if(endstopTriggered(i,dir[i]*(displacement[i]-distance_moved[i])))
             endstop_break=dir[i]*(i+1);
         }
         if(endstop_break!=0){
@@ -683,7 +690,7 @@ void loop() {
       s2=command.indexOf(" ", s1+1);
       axis_max[1]=command.substring(s1,s2).toInt();
       axis_max[2]=command.substring(s2).toInt();
-      EEPROM.put(EEPROM_AMAX_OFFSET, axis_max);
+      EEPROM.put(axis_max_eeprom, axis_max);
       Serial.println("done");
       return;
     }
