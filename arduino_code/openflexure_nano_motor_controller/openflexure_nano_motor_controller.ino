@@ -33,7 +33,7 @@
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
-#define VER_STRING "OpenFlexure Motor Board v0.3"
+#define VER_STRING "OpenFlexure Motor Board v0.4"
 
 // The array below has 3 stepper objects, for X,Y,Z respectively
 const int n_motors = 3;

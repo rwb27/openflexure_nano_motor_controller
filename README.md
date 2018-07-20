@@ -4,6 +4,9 @@ This aims to be a super-simple motor controller, based on an Arduino Nano and a 
 
 The repository contains three sets of files; the Arduino firmware in the ``arduino_code`` folder, a Python module in the ``openflexure_stage`` folder, and the PCB design in the ``pcb_design`` folder.
 
+## Documentation
+You can now see documentation at [Read the Docs](https://openflexure-stage.readthedocs.io/en/latest/index.html).
+
 ## Getting started
 
 The first step is to make and populate the PCB.  You can get in touch with [WaterScope](http://www.waterscope.org/) to order one if they have stock, or alternatively have them made via [Kit Space](http://www.kitspace.org/) ([link to this project](https://kitspace.org/boards/github.com/rwb27/openflexure_nano_motor_controller/)).

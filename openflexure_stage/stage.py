@@ -76,7 +76,16 @@ class OpenFlexureStage(BasicSerialInstrument):
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
         try:
             self.board =  self.readline(timeout=1).rstrip()
-            assert self.board.startswith("OpenFlexure Motor Board v0.3"), "Version string \"{}\" not recognised.".format(self.board)
+            # The slightly complicated regexp below will match the version string,
+            # and store the version number in the "groups" of the regexp.  The version
+            # number should be in the format 1.2 and the groups will be "1.2", "1", "2" 
+            # (for any number of elements).
+            match = re.match(r"OpenFlexure Motor Board v(([\d]+)(?:\.([\d]+))+)", self.board)
+            version = [int(g) for g in match.groups()[1:]]
+            assert match, "Version string \"{}\" not recognised.".format(self.board)
+            self.firmware_version = match.group(1)
+            assert version[0] == 0, "This version of the Python module requires firmware v0.4"
+            assert version[1] == 4, "This version of the Python module requires firmware v0.4"
 
             #Bit messy: Defining all valid modules as not available, then overwriting with available information if available.
             self.light_sensor = LightSensor(False)
@@ -95,6 +104,8 @@ class OpenFlexureStage(BasicSerialInstrument):
             # If an error occurred while setting up (e.g. because the board isn't connected or something)
             # make sure we close the serial port cleanly (otherwise it hangs open).
             self.close()
+            e.args += ("You may need to update the firmware running on the Arduino.  See " \
+                       "https://openflexure-stage.readthedocs.io/en/latest/firmware.html",)
             raise e
 
     @property
