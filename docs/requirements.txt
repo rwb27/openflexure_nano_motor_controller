@@ -1,0 +1,6 @@
+pyserial
+future
+sphinx
+sphinxcontrib-apidoc
+sphinx-rtd-theme
+numpy

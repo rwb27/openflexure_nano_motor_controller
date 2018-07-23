@@ -16,38 +16,97 @@ import sys
 import re
 import warnings
 
-
 class OpenFlexureStage(BasicSerialInstrument):
+    """Class managing serial communications with an Openflexure Motor Controller
+
+    The `OpenFlexureStage` class handles setting up communications with the stage,
+    wraps the various serial commands in Python methods, and provides iterators and
+    context managers to simplify opening/closing the hardware connection and some
+    other tasks like conducting a linear scan.
+
+    Arguments to the constructor are passed to the constructor of
+    :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
+    most likely the only one necessary is `port` which should be set to the serial port
+    you will use to communicate with the motor controller.
+
+    This class can be used as a context manager, i.e. it's encouraged to use it as::
+
+       with OpenFlexureStage() as stage:
+           stage.move_rel([1000,0,0])
+
+    In that case, the serial port will automatically be closed at the end of the block,
+    even if an error occurs.  Otherwise, be sure to call the
+    :meth:`~.BasicSerialInstrument.close()` method to release the serial port.
+    """
     port_settings = {'baudrate':115200, 'bytesize':EIGHTBITS, 'parity':PARITY_NONE, 'stopbits':STOPBITS_ONE}
+    """These are the settings for the stage's serial port, and can usually be left as default."""
     # position, step time and ramp time are get/set using simple serial
     # commands.
-    position = QueriedProperty(get_cmd="p?", response_string=r"%d %d %d")
-    step_time = QueriedProperty(get_cmd="dt?", set_cmd="dt %d", response_string="minimum step delay %d")
-    ramp_time = QueriedProperty(get_cmd="ramp_time?", set_cmd="ramp_time %d", response_string="ramp time %d")
+    position = QueriedProperty(get_cmd="p?", response_string=r"%d %d %d",
+            doc="Get the position of the stage as a tuple of 3 integers.")
+    step_time = QueriedProperty(get_cmd="dt?", set_cmd="dt %d", response_string="minimum step delay %d",
+            doc="Get or set the minimum time between steps of the motors in microseconds.\n\n"
+                "The step time is ``1000000/max speed`` in steps/second.  It is saved to EEPROM on "
+                "the Arduino, so it will be persistent even if the motor controller is turned off.")
+    ramp_time = QueriedProperty(get_cmd="ramp_time?", set_cmd="ramp_time %d", response_string="ramp time %d",
+            doc="Get or set the acceleration time in microseconds.\n\n"
+                "The stage will accelerate/decelerate between stationary and maximum speed over `ramp_time` "
+                "microseconds.  Zero means the stage runs at full speed initially, with no accleration "
+                "control.  Small moves may last less than `2*ramp_time`, in which case the acceleration "
+                "will be the same, but the stage will never reach full speed.  It is saved to EEPROM on "
+                "the Arduino, so it will be persistent even if the motor controller is turned off.")
     axis_names = ('x', 'y', 'z')
+    """The names of the stage's axes.  NB this also defines the number of axes."""
     board = None
+    """Once initialised, `board` is a string that identifies the firmware version."""
     supported_light_sensors = ["TSL2591","ADS1115"]
+    """This is a list of the supported light sensor module types."""
 
     def __init__(self, *args, **kwargs):
+        """Create a stage object.
+
+        Arguments are passed to the constructor of
+        :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
+        most likely the only one necessary is `port` which should be set to the serial port
+        you will use to communicate with the motor controller.  That's the first argument so
+        it doesn't need to be named.
+        """
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
-        self.board =  self.readline(timeout=1).rstrip()
-        assert self.board.startswith("OpenFlexure Motor Board v0.3"), "Version string \"{}\" not recognised.".format(self.board)
+        try:
+            self.board =  self.readline(timeout=1).rstrip()
+            # The slightly complicated regexp below will match the version string,
+            # and store the version number in the "groups" of the regexp.  The version
+            # number should be in the format 1.2 and the groups will be "1.2", "1", "2"
+            # (for any number of elements).
+            match = re.match(r"OpenFlexure Motor Board v(([\d]+)(?:\.([\d]+))+)", self.board)
+            version = [int(g) for g in match.groups()[1:]]
+            assert match, "Version string \"{}\" not recognised.".format(self.board)
+            self.firmware_version = match.group(1)
+            assert version[0] == 0, "This version of the Python module requires firmware v0.4"
+            assert version[1] == 4, "This version of the Python module requires firmware v0.4"
 
-        #Bit messy: Defining all valid modules as not available, then overwriting with available information if available.
-        self.light_sensor=LightSensor(False)
+            #Bit messy: Defining all valid modules as not available, then overwriting with available information if available.
+            self.light_sensor = LightSensor(False)
 
-        for module in self.list_modules():
-            module_type=module.split(':')[0].strip()
-            module_model=module.split(':')[1].strip()
-            if module_type.startswith('Light Sensor'):
-                if module_model in self.supported_light_sensors:
-                    self.light_sensor = LightSensor(True,parent=self,model=module_model)
+            for module in self.list_modules():
+                module_type=module.split(':')[0].strip()
+                module_model=module.split(':')[1].strip()
+                if module_type.startswith('Light Sensor'):
+                    if module_model in self.supported_light_sensors:
+                        self.light_sensor = LightSensor(True,parent=self,model=module_model)
+                    else:
+                        warnings.warn("Light sensor model \"%s\" not recognised."%(module_model),RuntimeWarning)
+                elif module_type.startswith('Endstops'):
+                    self.endstops = Endstops(True, parent=self, model=module_model)
                 else:
-                    warnings.warn("Light sensor model \"{}\" not recognised.".format(module_model),RuntimeWarning)
-            if module_type.startswith('Endstops'):
-                self.endstops = Endstops(True, parent=self, model=module_model)
-            else:
-                warnings.warn("Module type \"{}\" not recognised.".format(module_type),RuntimeWarning)
+                    warnings.warn("Module type \"{}\" not recognised.".format(module_type),RuntimeWarning)
+        except Exception as e:
+            # If an error occurred while setting up (e.g. because the board isn't connected or something)
+            # make sure we close the serial port cleanly (otherwise it hangs open).
+            self.close()
+            e.args += ("You may need to update the firmware running on the Arduino.  See " \
+                       "https://openflexure-stage.readthedocs.io/en/latest/firmware.html",)
+            raise e
 
     @property
     def n_axes(self):
@@ -57,6 +116,23 @@ class OpenFlexureStage(BasicSerialInstrument):
     _backlash = None
     @property
     def backlash(self):
+        """The distance used for backlash compensation.
+
+        Software backlash compensation is enabled by setting this property to a value
+        other than `None`.  The value can either be an array-like object (list, tuple,
+        or numpy array) with one element for each axis, or a single integer if all axes
+        are the same.
+
+        The property will always return an array with the same length as the number of
+        axes.
+
+        The backlash compensation algorithm is fairly basic - it ensures that we always
+        approach a point from the same direction.  For each axis that's moving, the
+        direction of motion is compared with ``backlash``.  If the direction is opposite,
+        then the stage will overshoot by the amount in ``-backlash[i]`` and then move
+        back by ``backlash[i]``.  This is computed per-axis, so if some axes are moving
+        in the same direction as ``backlash``, they won't do two moves.
+        """
         return self._backlash
 
     @backlash.setter
@@ -202,19 +278,33 @@ class OpenFlexureStage(BasicSerialInstrument):
         return BasicSerialInstrument.query(self, message, *args, **kwargs)
 
     def list_modules(self):
-        """ List all modules in form:
-        Module Name: Model"""
+        """Return a list of strings detailing optional modules.
+
+        Each module will correspond to a string of the form ``Module Name: Model``
+        """
         modules =  self.query("list_modules",multiline=True,termination_line="--END--\r\n").split('\r\n')[:-2]
         return [str(module) for module in modules]
 
     def print_help(self):
+        """Print the stage's built-in help message."""
         print(self.query("help",multiline=True,termination_line="--END--\r\n"))
 
 class LightSensor(OptionalModule):
+    """An optional module giving access to the light sensor.
+
+    If a light sensor is enabled in the motor controller's firmware, then
+    the :class:`openflexure_stage.OpenFlexureStage` will gain an optional
+    module which is an instance of this class.  It can be used to access
+    the light sensor (usually via the I2C bus).
+    """
     valid_gains = None
     _valid_gains_int = None
-    integration_time = QueriedProperty(get_cmd="light_sensor_integration_time?", set_cmd="light_sensor_integration_time %d", response_string="light sensor integration time %d ms")
-    intensity = QueriedProperty(get_cmd="light_sensor_intensity?", response_string="%d")
+    integration_time = QueriedProperty(get_cmd="light_sensor_integration_time?",
+                                       set_cmd="light_sensor_integration_time %d",
+                                       response_string="light sensor integration time %d ms",
+                                       doc="Get or set the integration time of the light sensor in milliseconds.")
+    intensity = QueriedProperty(get_cmd="light_sensor_intensity?", response_string="%d",
+                                doc="Read the current intensity measured by the light sensor (arbitrary units).")
 
     def __init__(self,available,parent=None,model="Generic"):
         super(LightSensor, self).__init__(available,parent=parent,module_type="LightSensor",model=model)
@@ -224,7 +314,9 @@ class LightSensor(OptionalModule):
 
     @property
     def gain(self):
-        """Read the light sensor gain"""
+        """"Get or set the current gain value of the light sensor.
+
+        Valid gain values are defined in the `valid_gains` property, and should be floating-point numbers."""
         self.confirm_available()
         gain = self._parent.query('light_sensor_gain?')
         M = re.search('[0-9\.]+(?=x)',gain)
@@ -234,7 +326,6 @@ class LightSensor(OptionalModule):
 
     @gain.setter
     def gain(self,val):
-        """set the light sensor gain"""
         self.confirm_available()
         assert int(val) in self._valid_gains_int, "Gain {} not valid must be one of: {}".format(val,self.valid_gains)
         gain = self._parent.query('light_sensor_gain %d'%(int(val)))
@@ -244,11 +335,21 @@ class LightSensor(OptionalModule):
         assert int(val) == int(float(M.group())), 'Gain of {} set, \"{}\" returned'.format(val,gain)
 
     def __get_gain_values(self):
-        """Read the available light sensor gains"""
+        """Read the allowable values for the light sensor's gain.
+
+        This function will attempt to return a list of floating-point numbers which may
+        be used as values of the `gain` property.  If the stage returns non-floating-point
+        values, the list will be of strings.
+        """
         self.confirm_available()
         gains = self._parent.query('light_sensor_gain_values?')
-        M = re.findall('[0-9\.]+(?=x)',gains)
-        return [float(gain) for gain in M]
+        try:
+            M = re.findall('[0-9\.]+(?=x)',gains)
+            return [float(gain) for gain in M]
+        except:
+            # Fall back to strings if we don't get floats (unlikely)
+            gain_strings = gains[20:].split(", ")
+            return gain_strings
 
 class Endstops(OptionalModule):
 
@@ -268,9 +369,7 @@ class Endstops(OptionalModule):
         if direction == "max" or direction == "both":
             self._parent.query('home_max')
 
-
-
-if __name__ == "__main__":
+if __name__ == "__main__": #TODO: this should probably be binned!
 
     assert len(sys.argv)<3, "Expecting at most one input argument, the port"
     if len(sys.argv)==1:
@@ -309,5 +408,4 @@ if __name__ == "__main__":
         newpos = np.array([np.cos(a), np.sin(a), 0]) * radius
         displacement = newpos - oldpos
         s.move_rel(list(displacement))
-
     s.close()

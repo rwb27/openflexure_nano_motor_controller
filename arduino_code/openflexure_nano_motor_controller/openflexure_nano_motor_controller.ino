@@ -66,7 +66,7 @@
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
-#define VER_STRING "OpenFlexure Motor Board v0.3"
+#define VER_STRING "OpenFlexure Motor Board v0.4"
 
 // The array below has 3 stepper objects, for X,Y,Z respectively
 const int n_motors = 3;
@@ -122,8 +122,6 @@ void setup() {
   }
   #ifdef LIGHT_SENSOR
   setup_light_sensor();
-  #else
-  Serial.println(F(VER_STRING));
   #endif /* LIGHT_SENSOR */
 
   #if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
@@ -149,6 +147,8 @@ void setup() {
         pinMode(endstops_max[i], INPUT);
     }
   #endif
+
+  Serial.println(F(VER_STRING));
 
 }
 
@@ -389,9 +389,8 @@ void setup_light_sensor(){
   {
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
-    Serial.println(F(VER_STRING));
-  }
-  else
+  } 
+  else 
   {
     Serial.println(F("No light sensor found.  NB your board will start up faster if you recompile without light sensor support."));
   }
@@ -465,7 +464,6 @@ Adafruit_ADS1115 ads; // pass in a number for the sensor identifier (for your us
 void setup_light_sensor(){
   ads.begin();
   ads.setGain(GAIN_ONE);
-  Serial.println(F(VER_STRING));
 }
 
 void print_light_sensor_gain(){
