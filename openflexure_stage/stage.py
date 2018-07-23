@@ -28,7 +28,6 @@ class OpenFlexureStage(BasicSerialInstrument):
     board = None
     supported_light_sensors = ["TSL2591","ADS1115"]
 
-
     def __init__(self, *args, **kwargs):
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
         self.board =  self.readline(timeout=1).rstrip()
@@ -44,9 +43,11 @@ class OpenFlexureStage(BasicSerialInstrument):
                 if module_model in self.supported_light_sensors:
                     self.light_sensor = LightSensor(True,parent=self,model=module_model)
                 else:
-                    warnings.warn("Light sensor model \"%s\" not recognised."%(module_model),RuntimeWarning)
+                    warnings.warn("Light sensor model \"{}\" not recognised.".format(module_model),RuntimeWarning)
+            if module_type.startswith('Endstops'):
+                self.endstops = Endstops(True, parent=self, model=module_model)
             else:
-                warnings.warn("Module type \"%s\" not recognised."%(module_type),RuntimeWarning)
+                warnings.warn("Module type \"{}\" not recognised.".format(module_type),RuntimeWarning)
 
     @property
     def n_axes(self):
@@ -88,11 +89,11 @@ class OpenFlexureStage(BasicSerialInstrument):
 
         initial_move = np.array(displacement, dtype=np.int)
         # Backlash Correction
-        # This backlash correction strategy ensures we're always approaching the 
+        # This backlash correction strategy ensures we're always approaching the
         # end point from the same direction, while minimising the amount of extra
         # motion.  It's a good option if you're scanning in a line, for example,
         # as it will kick in when moving to the start of the line, but not for each
-        # point on the line.  
+        # point on the line.
         # For each axis where we're moving in the *opposite*
         # direction to self.backlash, we deliberately overshoot:
         initial_move -= np.where(self.backlash*displacement < 0,
@@ -138,7 +139,7 @@ class OpenFlexureStage(BasicSerialInstrument):
     def scan_linear(self, rel_positions, backlash=True, return_to_start=True):
         """Scan through a list of (relative) positions (generator fn)
 
-        rel_positions should be an nx3-element array (or list of 3 element arrays).  
+        rel_positions should be an nx3-element array (or list of 3 element arrays).
         Positions should be relative to the starting position - not a list of relative moves.
 
         backlash argument is passed to move_rel
@@ -247,7 +248,25 @@ class LightSensor(OptionalModule):
         self.confirm_available()
         gains = self._parent.query('light_sensor_gain_values?')
         M = re.findall('[0-9\.]+(?=x)',gains)
-        return [float(gain) for gain in M] 
+        return [float(gain) for gain in M]
+
+class Endstops(OptionalModule):
+
+    installed=[]
+
+    def __init__(self,available,parent=None,model="min"):
+        super(Endstops, self).__init__(available,parent=parent,model="Endstops")
+        self.installed=model.split(' ')
+
+    status = QueriedProperty(get_cmd="endstops?", response_string=r"%d %d %d")
+    maxima = QueriedProperty(get_cmd="max_p?", set_cmd="max %d %d %d", response_string="%d %d %d")
+
+    def home(self, direction="min"):
+        """ Home all axis in the given direction (min/max/both)"""
+        if direction == "min" or direction == "both":
+            self._parent.query('home_min')
+        if direction == "max" or direction == "both":
+            self._parent.query('home_max')
 
 
 
@@ -290,6 +309,5 @@ if __name__ == "__main__":
         newpos = np.array([np.cos(a), np.sin(a), 0]) * radius
         displacement = newpos - oldpos
         s.move_rel(list(displacement))
-
 
     s.close()

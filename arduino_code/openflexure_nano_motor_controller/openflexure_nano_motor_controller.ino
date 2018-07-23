@@ -36,9 +36,9 @@
 #define DEBUG_ON
 
 #ifdef DEBUG_ON
-  #define DEBUG(x)  Serial.println (x)
+  #define D(x)  Serial.println (x)
 #else
-  #define DEBUG(x)  
+  #define D(x)
 #endif
 
 
@@ -47,7 +47,7 @@
  * ENDSTOPS *
  ************
 */
-#define ENDSTOPS_MIN
+//#define ENDSTOPS_MIN
 //#define ENDSTOPS_MAX
 
 #if defined(ENDSTOPS_MIN) || defined(ENDSTOPS_MAX)
@@ -57,12 +57,12 @@
   #define ENDSTOPS_PULLUPS true
 
   //soft endstops trigger when 0/MAX is reached in the direction without endstops
-  #define SOFT_ENDSTOPS
+  #define ENDSTOPS_SOFT
 
   //endstops wiring and positions
   const int endstops_min[]={A0,A1,A2};
   //const int endstops_max[]={A0,A1,A2};
-  long axis_max[3]; //TODO calculate/measure
+  long axis_max[3];
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
@@ -184,7 +184,7 @@ boolean endstopTriggered(int axis, int direction){
       if(ENDSTOPS_INVERT!=(value<100))
         return true;
     }
-#elif defined(SOFT_ENDSTOPS)
+#elif defined(ENDSTOPS_SOFT)
     if(direction<0 && current_pos[axis]<1)
         return true;
 #endif
@@ -195,7 +195,7 @@ boolean endstopTriggered(int axis, int direction){
       if(ENDSTOPS_INVERT!=(value<100))
         return true;
   }
-#elif defined(SOFT_ENDSTOPS)
+#elif defined(ENDSTOPS_SOFT)
   if(direction>0 && current_pos[axis]>=axis_max[axis])
     return true;
 #endif
@@ -223,10 +223,10 @@ void print_axes_max(){
   Serial.println();
 }
 
-void home_all(){
+void home_min(){
   #ifdef ENDSTOPS_MIN
     int hit=0;
-    long shift_min[]={3000,3000,3000};//this should be enough to open the endstop+a few steps
+    long shift_min[]={3500,3500,3500};//this should be enough to open the endstop+a few steps
     //home all 3 axes
     long displ[]={-100000,-100000,-100000};
     EACH_MOTOR{
@@ -235,15 +235,15 @@ void home_all(){
     }
     move_axes(shift_min);
     //now we should be <shift> steps away in all axes, first shift a bit closer
-    //as the close and open positions some distance (~700 steps) apart, then go
+    //as the close and open positions some distance apart, then go
     //slowly back for maximum accuracy
     long shift_back[]={-shift_min[0]/2,-shift_min[1]/2,-shift_min[2]/2};
     move_axes(shift_back);
-    delay(100);
+    delay(200);
     EACH_MOTOR{
       while(!endstopTriggered(i,-1)){
         stepMotor(i,-1);
-        delay(150);
+        delayMicroseconds(2000);
       }
       current_pos[i]=0;
     }
@@ -251,8 +251,11 @@ void home_all(){
     //move a little higher so the endstops are released
     move_axes(shift_min);
   #endif
+}
 
-  //TODO: this part was not tested
+
+// Untested
+void home_max(){
   #ifdef ENDSTOPS_MAX
     //same as above
     int hit=0;
@@ -574,7 +577,10 @@ void loop() {
       #ifdef ENDSTOPS_MAX
         Serial.print(" max");
       #endif
-        Serial.println();
+      #ifdef ENDSTOPS_SOFT
+        Serial.print(" soft");
+      #endif
+      Serial.println();
       #endif
       Serial.println("--END--");
       return;
@@ -675,8 +681,12 @@ void loop() {
        print_endstops_status();
        return;
     }
-    if(command.startsWith("home")){
-      home_all();
+    if(command.startsWith("home_min")){
+      home_min();
+      return;
+    }
+    if(command.startsWith("home_max")){
+      home_max();
       return;
     }
     if(command.startsWith("max_p?")){
