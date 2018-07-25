@@ -352,18 +352,28 @@ class LightSensor(OptionalModule):
             return gain_strings
 
 class Endstops(OptionalModule):
+    """An optional module for use with endstops.
+
+    If endstops are installed in the firmware the :class:`openflexure_stage.OpenFlexureStage`
+    will gain an optional module which is an instance of this class.  It can be used to retrieve
+    the type, state of the endstops, read and write maximum positions, and home.
+    """
 
     installed=[]
+    """List of installed endstop types (min, max, soft)"""
 
     def __init__(self,available,parent=None,model="min"):
         super(Endstops, self).__init__(available,parent=parent,model="Endstops")
         self.installed=model.split(' ')
 
-    status = QueriedProperty(get_cmd="endstops?", response_string=r"%d %d %d")
-    maxima = QueriedProperty(get_cmd="max_p?", set_cmd="max %d %d %d", response_string="%d %d %d")
+    status = QueriedProperty(get_cmd="endstops?", response_string=r"%d %d %d",
+                            doc="Get endstops status as {-1,0,1} for {min,no,max} endstop triggered for each axis")
+    maxima = QueriedProperty(get_cmd="max_p?", set_cmd="max %d %d %d", response_string="%d %d %d",
+                            doc="Vector of maximum positions, homing to max endstops will measure this, "+
+                                "can be set to a known value for use with max only and min+soft endstops")
 
     def home(self, direction="min"):
-        """ Home all axis in the given direction (min/max/both)"""
+        """ Home all axes in the given direction (min/max/both)"""
         if direction == "min" or direction == "both":
             self._parent.query('home_min')
         if direction == "max" or direction == "both":

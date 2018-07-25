@@ -743,8 +743,10 @@ void loop() {
 
       #if defined(ENDSTOPS_MIN)||defined(ENDSTOPS_MAX)
       Serial.println(F("endstops?                      - get triggered endstops in (1,0,-1) format for max, none, min"));
-      Serial.println(F("home                           - home all axes (touches all physical endstops"));
+      Serial.println(F("home_min                       - home all axes to their min position"));
+      Serial.println(F("home_max                       - home all axes to their max position"));
       Serial.println(F("max_p?                         - return positions of max endstops"));
+      Serial.println(F("max <d> <d> <d>                - set maximum positions"));
       #endif
       Serial.println("");
       Serial.println("Input Key:");
