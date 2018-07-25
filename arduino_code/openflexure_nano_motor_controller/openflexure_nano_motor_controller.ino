@@ -61,7 +61,7 @@
 
   //endstops wiring and positions
   const int endstops_min[]={A0,A1,A2};
-  //const int endstops_max[]={A0,A1,A2};
+  const int endstops_max[]={A3,A4,A5};
   long axis_max[3];
 #endif
 
@@ -224,28 +224,52 @@ void print_axes_max(){
 }
 
 void home_min(){
+    byte axes=7; //00000111
+    home_min(axes);
+}
+
+void home_max(){
+  byte axes=7;
+  home_max(axes);
+}
+
+void home_min(byte axes){
   #ifdef ENDSTOPS_MIN
     int hit=0;
-    long shift_min[]={3500,3500,3500};//this should be enough to open the endstop+a few steps
-    //home all 3 axes
-    long displ[]={-100000,-100000,-100000};
+    long shift_min[3];
+    long displ[3];
+
+    EACH_MOTOR{
+      if(axes&(1<<i)){
+        shift_min[i]=3500;
+        displ[i]=-100000;
+      }else{
+        shift_min[i]=0;
+        displ[i]=0;
+      }
+    }
+
     EACH_MOTOR{
       hit=move_axes(displ);
       displ[-hit-1]=0;
     }
+
     move_axes(shift_min);
-    //now we should be <shift> steps away in all axes, first shift a bit closer
+
+    //now we should be <shift> steps away in chosen axes, first shift a bit closer
     //as the close and open positions some distance apart, then go
     //slowly back for maximum accuracy
     long shift_back[]={-shift_min[0]/2,-shift_min[1]/2,-shift_min[2]/2};
     move_axes(shift_back);
     delay(200);
     EACH_MOTOR{
-      while(!endstopTriggered(i,-1)){
-        stepMotor(i,-1);
-        delayMicroseconds(2000);
+      if(axes&(1<<i)){
+        while(!endstopTriggered(i,-1)){
+          stepMotor(i,-1);
+          delayMicroseconds(2000);
+        }
+        current_pos[i]=0;
       }
-      current_pos[i]=0;
     }
     EEPROM.put(0, current_pos);
     //move a little higher so the endstops are released
@@ -253,29 +277,40 @@ void home_min(){
   #endif
 }
 
-
-// Untested
-void home_max(){
+// UNTESTED
+void home_max(byte axes){
   #ifdef ENDSTOPS_MAX
     //same as above
     int hit=0;
-    long shift_max[]={-2000,-2000,-2000};
-    long displ[]={150000,150000,150000};
-    //home all 3 axes
+    long shift_max[3];
+    long displ[3];
+    EACH_MOTOR{
+      if(axes&(1<<i)){
+        shift_max[i]=-2000;
+        displ[i]=150000;
+      }else{
+        shift_max[i]=0;
+        displ[i]=0;
+      }
+    }
+
     EACH_MOTOR{
       hit=move_axes(displ);
       displ[hit-1]=0;
     }
+
     move_axes(shift_max);
     long shift_forw[]= {shift_max[0]/2,shift_max[1]/2,shift_max[2]/2};
     move_axes(shift_forw);
 
     EACH_MOTOR{
-      while(!endstopTriggered(i,1)){
-        stepMotor(i,1);
-        delay(150);
+      if(axes&(1<<i)){
+        while(!endstopTriggered(i,1)){
+          stepMotor(i,1);
+          delay(150);
+        }
+        axis_max[i]=current_pos[i];
       }
-      axis_max[i]=current_pos[i];
     }
     EEPROM.put(0, current_pos);
     EEPROM.put(axis_max_eeprom, axis_max);
@@ -389,8 +424,8 @@ void setup_light_sensor(){
   {
     tsl.setGain(TSL2591_GAIN_MED);
     tsl.setTiming(TSL2591_INTEGRATIONTIME_100MS);  // shortest integration time (bright light)
-  } 
-  else 
+  }
+  else
   {
     Serial.println(F("No light sensor found.  NB your board will start up faster if you recompile without light sensor support."));
   }
@@ -680,12 +715,16 @@ void loop() {
        return;
     }
     if(command.startsWith("home_min")){
-      home_min();
-      return;
+      if(command.indexOf(" ")==-1)
+        return home_min();
+      byte val=command.substring(9).toInt();
+      return home_min(val);
     }
     if(command.startsWith("home_max")){
-      home_max();
-      return;
+      if(command.indexOf(" ")==-1)
+        return home_max();
+      byte val=command.substring(9).toInt();
+      return home_max(val);
     }
     if(command.startsWith("max_p?")){
       print_axes_max();
@@ -743,8 +782,8 @@ void loop() {
 
       #if defined(ENDSTOPS_MIN)||defined(ENDSTOPS_MAX)
       Serial.println(F("endstops?                      - get triggered endstops in (1,0,-1) format for max, none, min"));
-      Serial.println(F("home_min                       - home all axes to their min position"));
-      Serial.println(F("home_max                       - home all axes to their max position"));
+      Serial.println(F("home_min <axes?>               - home given or all axes to their min position"));
+      Serial.println(F("home_max <axes?>               - home given or all axes to their max position"));
       Serial.println(F("max_p?                         - return positions of max endstops"));
       Serial.println(F("max <d> <d> <d>                - set maximum positions"));
       #endif

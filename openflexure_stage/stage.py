@@ -372,12 +372,24 @@ class Endstops(OptionalModule):
                             doc="Vector of maximum positions, homing to max endstops will measure this, "+
                                 "can be set to a known value for use with max only and min+soft endstops")
 
-    def home(self, direction="min"):
-        """ Home all axes in the given direction (min/max/both)"""
+    def home(self, direction="min", axes=['x','y','z']):
+        """ Home given/all axes in the given direction (min/max/both)
+
+            :param direction: one of {min,max,both}
+            :param axes: list of axes e.g. ['x','y']
+        """
+        ax=0
+        if 'x' in axes:
+            ax+=1
+        if 'y' in axes:
+            ax+=2
+        if 'z' in axes:
+            ax+=3
+
         if direction == "min" or direction == "both":
-            self._parent.query('home_min')
+            self._parent.query('home_min {}'.format(ax))
         if direction == "max" or direction == "both":
-            self._parent.query('home_max')
+            self._parent.query('home_max {}'.foramt(ax))
 
 if __name__ == "__main__": #TODO: this should probably be binned!
 
