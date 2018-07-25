@@ -370,7 +370,7 @@ int move_axes(long displ[n_motors]){
               current_pos[endstop_break-1]=axis_max[endstop_break-1];
             #endif
           ret=endstop_break;
-          goto movedone; //this is the proper use for goto
+          break;
         }
       #endif
 
@@ -411,9 +411,8 @@ int move_axes(long displ[n_motors]){
       }
       //delayMicroseconds(2000);
     }
-    movedone:
-      EEPROM.put(0, current_pos);
-      return ret;
+    EEPROM.put(0, current_pos);
+    return ret;
 }
 
 #ifdef ADAFRUIT_TSL2591
