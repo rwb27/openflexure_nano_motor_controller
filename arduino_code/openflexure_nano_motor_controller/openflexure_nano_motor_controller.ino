@@ -275,6 +275,7 @@ void home_min(byte axes){
     //move a little higher so the endstops are released
     move_axes(shift_min);
   #endif
+  Serial.println("done.");
 }
 
 // UNTESTED
@@ -315,6 +316,7 @@ void home_max(byte axes){
     EEPROM.put(0, current_pos);
     EEPROM.put(axis_max_eeprom, axis_max);
   #endif
+  Serial.println("done.");
 }
 
 
@@ -355,8 +357,8 @@ int move_axes(long displ[n_motors]){
             endstop_break=dir[i]*(i+1);
         }
         if(endstop_break!=0){
-          Serial.print("Endstop hit:");
-          Serial.println(endstop_break);
+          //Serial.print("Endstop hit:");
+          //Serial.println(endstop_break);
           //if we have both min/max endstops, axis_max is adjusted to the correct value
           //if we only have min, we go from 0 -> predefined axis_max
           //if we only have max, we go from 0 -> predefined axis_max
@@ -366,7 +368,7 @@ int move_axes(long displ[n_motors]){
           else //max
             #if defined(ENDSTOPS_MIN) && defined(ENDSTOPS_MAX)
               axis_max[endstop_break-1]=current_pos[endstop_break-1];
-            #else
+            #elif defined(ENDSTOP_MAX) //we do not do this for ENDSTOPS_SOFT
               current_pos[endstop_break-1]=axis_max[endstop_break-1];
             #endif
           ret=endstop_break;
