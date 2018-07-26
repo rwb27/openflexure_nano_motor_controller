@@ -370,6 +370,8 @@ int move_axes(long displ[n_motors]){
               axis_max[endstop_break-1]=current_pos[endstop_break-1];
             #elif defined(ENDSTOP_MAX) //we do not do this for ENDSTOPS_SOFT
               current_pos[endstop_break-1]=axis_max[endstop_break-1];
+            #else
+              ;
             #endif
           ret=endstop_break;
           break;
