@@ -785,8 +785,8 @@ void loop() {
 
       #if defined(ENDSTOPS_MIN)||defined(ENDSTOPS_MAX)
       Serial.println(F("endstops?                      - get triggered endstops in (1,0,-1) format for max, none, min"));
-      Serial.println(F("home_min <axes?>               - home given or all axes to their min position"));
-      Serial.println(F("home_max <axes?>               - home given or all axes to their max position"));
+      Serial.println(F("home_min <axes?>               - home given (00000zyx byte, e.g. 1 for x) or all axes to their min position"));
+      Serial.println(F("home_max <axes?>               - home given (00000zyx byte, e.g. 3 for x and y) or all axes to their max position"));
       Serial.println(F("max_p?                         - return positions of max endstops"));
       Serial.println(F("max <d> <d> <d>                - set maximum positions"));
       #endif
