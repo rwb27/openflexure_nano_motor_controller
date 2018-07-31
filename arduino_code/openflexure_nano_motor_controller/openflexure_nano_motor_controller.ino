@@ -266,7 +266,7 @@ void home_min(byte axes){
       if(axes&(1<<i)){
         while(!endstopTriggered(i,-1)){
           stepMotor(i,-1);
-          delayMicroseconds(2000);
+          delayMicroseconds(4000);
         }
         current_pos[i]=0;
       }
