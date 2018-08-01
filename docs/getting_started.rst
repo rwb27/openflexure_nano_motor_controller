@@ -34,3 +34,4 @@ Using optional features
 -------------------------
 If you compile support for it, you can add a light sensor to the stage, which is accessed as :attr:`~.OpenFlexureStage.light_sensor`.  This returns a :class:`.LightSensor` which allows you to control the gain (if possible) and read the light intensity.
 
+If you compile support for it, you can add mechanical endstops, which are accessed as :attr:`~.OpenFlexureStage.endstops`. This returns :class:`.Endstops` which allows you to home the axes, check endstop status, and control soft endstop position (if enabled).
