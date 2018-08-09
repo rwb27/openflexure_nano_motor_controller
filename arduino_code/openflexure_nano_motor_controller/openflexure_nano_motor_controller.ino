@@ -79,6 +79,8 @@ Stepper* motors[n_motors];
 signed long current_pos[n_motors];
 long steps_remaining[n_motors];
 
+bool test_mode=false;
+
 // We'll use this input buffer for serial comms
 const int INPUT_BUFFER_LENGTH = 64;
 char input_buffer[INPUT_BUFFER_LENGTH];
@@ -254,8 +256,13 @@ void home_min(byte axes){
       displ[-hit-1]=0;
     }
 
-    move_axes(shift_min);
+    //if in test mode, print positions when the endstops were hit the first time
+    if(test_mode){
+      Serial.print("First hits: ");
+      print_position();
+    }
 
+    move_axes(shift_min);
     //now we should be <shift> steps away in chosen axes, first shift a bit closer
     //as the close and open positions some distance apart, then go
     //slowly back for maximum accuracy
@@ -268,12 +275,20 @@ void home_min(byte axes){
           stepMotor(i,-1);
           delayMicroseconds(4000);
         }
+        if(test_mode){
+          Serial.print("Homed endstop ");
+          Serial.print(i);
+          Serial.print(":");
+          Serial.print(current_pos[i]);
+          Serial.println();
+        }
         current_pos[i]=0;
       }
     }
     EEPROM.put(0, current_pos);
     //move a little higher so the endstops are released
-    move_axes(shift_min);
+    if(!test_mode)
+      move_axes(shift_min);
   #endif
   Serial.println("done.");
 }
@@ -300,6 +315,11 @@ void home_max(byte axes){
       displ[hit-1]=0;
     }
 
+    if(test_mode){
+      Serial.print("First hits: ");
+      print_position();
+    }
+
     move_axes(shift_max);
     long shift_forw[]= {shift_max[0]/2,shift_max[1]/2,shift_max[2]/2};
     move_axes(shift_forw);
@@ -309,6 +329,13 @@ void home_max(byte axes){
         while(!endstopTriggered(i,1)){
           stepMotor(i,1);
           delay(150);
+        }
+        if(test_mode){
+          Serial.print("Homed endstop ");
+          Serial.print(i);
+          Serial.print(":");
+          Serial.print(current_pos[i]);
+          Serial.println();
         }
         axis_max[i]=current_pos[i];
       }
@@ -363,9 +390,9 @@ int move_axes(long displ[n_motors]){
           //if we only have min, we go from 0 -> predefined axis_max
           //if we only have max, we go from 0 -> predefined axis_max
           //the predefined axis_max are the travel distances in steps
-          if(endstop_break<0) //min is always 0
+          if(!test_mode && endstop_break<0) //min is always 0
             current_pos[-endstop_break-1]=0;
-          else //max
+          else if(!test_mode) //max
             #if defined(ENDSTOPS_MIN) && defined(ENDSTOPS_MAX)
               axis_max[endstop_break-1]=current_pos[endstop_break-1];
             #elif defined(ENDSTOP_MAX) //we do not do this for ENDSTOPS_SOFT
@@ -744,6 +771,16 @@ void loop() {
       Serial.println("done");
       return;
     }
+    if(command.startsWith("test_mode")){
+      if(command.equals("test_mode on")){
+        test_mode=true;
+        Serial.println("test_mode on");
+      }else{
+        test_mode=false;
+        Serial.println("test_mode off");
+      }
+      return;
+    }
 
     #endif //ENDSTOPS
     if(command.startsWith("help")){
@@ -790,6 +827,7 @@ void loop() {
       Serial.println(F("max_p?                         - return positions of max endstops"));
       Serial.println(F("max <d> <d> <d>                - set maximum positions"));
       #endif
+      Serial.println(F("test_mode <s>                  - set test_mode <on> <off>"));
       Serial.println("");
       Serial.println("Input Key:");
       Serial.println(F("<d>                            - a decimal integer."));

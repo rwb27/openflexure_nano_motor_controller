@@ -100,6 +100,7 @@ class OpenFlexureStage(BasicSerialInstrument):
                     self.endstops = Endstops(True, parent=self, model=module_model)
                 else:
                     warnings.warn("Module type \"{}\" not recognised.".format(module_type),RuntimeWarning)
+            self.test_mode=False
         except Exception as e:
             # If an error occurred while setting up (e.g. because the board isn't connected or something)
             # make sure we close the serial port cleanly (otherwise it hangs open).
@@ -289,6 +290,29 @@ class OpenFlexureStage(BasicSerialInstrument):
         """Print the stage's built-in help message."""
         print(self.query("help",multiline=True,termination_line="--END--\r\n"))
 
+    @property
+    def test_mode(self):
+        """ Get or set test mode
+
+            In test mode
+                * Stage may return extra information
+                * When homing, the stage will remain at the 0 position
+                * Position will not be reset when an endstop is hit
+        """
+        return self._test_mode
+
+    @test_mode.setter
+    def test_mode(self, value):
+        self._test_mode=value
+        self.query("test_mode "+"on" if value else "off")
+        #propagate change to optional modules
+        if hasattr(self, 'endstops') and self.endstops:
+            self.endstops.test_mode=value
+        if hasattr(self, 'light_sensor') and self.light_sensor:
+            self.light_sensor.test_mode=value
+
+
+
 class LightSensor(OptionalModule):
     """An optional module giving access to the light sensor.
 
@@ -360,6 +384,7 @@ class Endstops(OptionalModule):
     """
 
     installed=[]
+    test_mode=False
     """List of installed endstop types (min, max, soft)"""
 
     def __init__(self,available,parent=None,model="min"):
@@ -387,9 +412,15 @@ class Endstops(OptionalModule):
             ax+=3
 
         if direction == "min" or direction == "both":
-            self._parent.query('home_min {}'.format(ax))
+            if self.test_mode:
+                return self._parent.query('home_min {}'.format(ax),multiline=True,termination_line="done.\r\n")
+            else:
+                self._parent.query('home_min {}'.format(ax))
         if direction == "max" or direction == "both":
-            self._parent.query('home_max {}'.foramt(ax))
+            if self.test_mode:
+                return self._parent.query('home_max {}'.format(ax),multiline=True,termination_line="done.\r\n")
+            else:
+                self._parent.query('home_max {}'.format(ax))
 
 if __name__ == "__main__": #TODO: this should probably be binned!
 
