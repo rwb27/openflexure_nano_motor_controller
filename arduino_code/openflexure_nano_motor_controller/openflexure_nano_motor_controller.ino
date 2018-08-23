@@ -20,6 +20,9 @@
 //#define ADAFRUIT_TSL2591
 //#define ADAFRUIT_ADS1115
 
+//#define SANGABOARDv2
+#define SANGABOARDv3
+
 #ifdef ADAFRUIT_TSL2591
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
@@ -99,12 +102,18 @@ int command_prefix(String command, const char ** prefixes, int n_prefixes){
 void setup() {
   // initialise serial port
   Serial.begin(115200);
-
+  while (! Serial )
+    delay(1);
   // get the stepoper objects from the motor shield objects
-  motors[0] = new Stepper(8, 13, 12, 11, 10);
-  motors[1] = new Stepper(8, 9, 8, 7, 6);
-  motors[2] = new Stepper(8, 5, 4, 3, 2);
-
+  #if defined(SANGABOARDv2)
+    motors[0] = new Stepper(8, 13, 12, 11, 10);
+    motors[1] = new Stepper(8, 9, 8, 7, 6);
+    motors[2] = new Stepper(8, 5, 4, 3, 2);
+  #elif defined(SANGABOARDv3)
+    motors[0] = new Stepper(8, 8, 9, 10, 11);
+    motors[1] = new Stepper(8, 5, 13, 4, 12);
+    motors[2] = new Stepper(8, 6, 7, A5, A4);
+  #endif
   EACH_MOTOR{
     motors[i]->setSpeed(1*8.0/4096.0); //using Fergus's speed for now, though this is ignored...
     steps_remaining[i]=0;
@@ -781,8 +790,12 @@ void loop() {
       }
       return;
     }
-
     #endif //ENDSTOPS
+
+    if(command.startsWith("version")){
+      Serial.println(F(VER_STRING));
+      return;
+    }
     if(command.startsWith("help")){
       Serial.println("");
       Serial.println(F(VER_STRING));
@@ -828,6 +841,7 @@ void loop() {
       Serial.println(F("max <d> <d> <d>                - set maximum positions"));
       #endif
       Serial.println(F("test_mode <s>                  - set test_mode <on> <off>"));
+      Serial.println(F("version                        - get firmware version string"));
       Serial.println("");
       Serial.println("Input Key:");
       Serial.println(F("<d>                            - a decimal integer."));

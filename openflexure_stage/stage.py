@@ -73,7 +73,8 @@ class OpenFlexureStage(BasicSerialInstrument):
         """
         super(OpenFlexureStage, self).__init__(*args, **kwargs)
         try:
-            self.board =  self.readline(timeout=1).rstrip()
+            # Request version from the board
+            self.board = self.query("version").rstrip()
             # The slightly complicated regexp below will match the version string,
             # and store the version number in the "groups" of the regexp.  The version
             # number should be in the format 1.2 and the groups will be "1.2", "1", "2"
