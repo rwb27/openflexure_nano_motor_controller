@@ -20,9 +20,6 @@
 //#define ADAFRUIT_TSL2591
 //#define ADAFRUIT_ADS1115
 
-//#define SANGABOARDv2
-#define SANGABOARDv3
-
 #ifdef ADAFRUIT_TSL2591
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
@@ -66,6 +63,12 @@
   const int endstops_min[]={A0,A1,A2};
   const int endstops_max[]={A3,A4,A5};
   long axis_max[3];
+#endif
+
+#ifdef ARDUINO_AVR_LEONARDO
+  #define SANGABOARDv3
+#else
+  #define SANGABOARDv2
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
