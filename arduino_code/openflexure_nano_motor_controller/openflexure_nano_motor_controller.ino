@@ -65,6 +65,12 @@
   long axis_max[3];
 #endif
 
+#ifdef ARDUINO_AVR_LEONARDO
+  #define SANGABOARDv3
+#else
+  #define SANGABOARDv2
+#endif
+
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
 #define VER_STRING "OpenFlexure Motor Board v0.4"
 
@@ -78,6 +84,8 @@ const int axis_max_eeprom = sizeof(long)*(n_motors+2);
 Stepper* motors[n_motors];
 signed long current_pos[n_motors];
 long steps_remaining[n_motors];
+
+bool test_mode=false;
 
 // We'll use this input buffer for serial comms
 const int INPUT_BUFFER_LENGTH = 64;
@@ -97,12 +105,18 @@ int command_prefix(String command, const char ** prefixes, int n_prefixes){
 void setup() {
   // initialise serial port
   Serial.begin(115200);
-
+  while (! Serial )
+    delay(1);
   // get the stepoper objects from the motor shield objects
-  motors[0] = new Stepper(8, 13, 12, 11, 10);
-  motors[1] = new Stepper(8, 9, 8, 7, 6);
-  motors[2] = new Stepper(8, 5, 4, 3, 2);
-
+  #if defined(SANGABOARDv2)
+    motors[0] = new Stepper(8, 13, 12, 11, 10);
+    motors[1] = new Stepper(8, 9, 8, 7, 6);
+    motors[2] = new Stepper(8, 5, 4, 3, 2);
+  #elif defined(SANGABOARDv3)
+    motors[0] = new Stepper(8, 8, 9, 10, 11);
+    motors[1] = new Stepper(8, 5, 13, 4, 12);
+    motors[2] = new Stepper(8, 6, 7, A5, A4);
+  #endif
   EACH_MOTOR{
     motors[i]->setSpeed(1*8.0/4096.0); //using Fergus's speed for now, though this is ignored...
     steps_remaining[i]=0;
@@ -254,8 +268,13 @@ void home_min(byte axes){
       displ[-hit-1]=0;
     }
 
-    move_axes(shift_min);
+    //if in test mode, print positions when the endstops were hit the first time
+    if(test_mode){
+      Serial.print("First hits: ");
+      print_position();
+    }
 
+    move_axes(shift_min);
     //now we should be <shift> steps away in chosen axes, first shift a bit closer
     //as the close and open positions some distance apart, then go
     //slowly back for maximum accuracy
@@ -268,12 +287,20 @@ void home_min(byte axes){
           stepMotor(i,-1);
           delayMicroseconds(4000);
         }
+        if(test_mode){
+          Serial.print("Homed endstop ");
+          Serial.print(i);
+          Serial.print(":");
+          Serial.print(current_pos[i]);
+          Serial.println();
+        }
         current_pos[i]=0;
       }
     }
     EEPROM.put(0, current_pos);
     //move a little higher so the endstops are released
-    move_axes(shift_min);
+    if(!test_mode)
+      move_axes(shift_min);
   #endif
   Serial.println("done.");
 }
@@ -300,6 +327,11 @@ void home_max(byte axes){
       displ[hit-1]=0;
     }
 
+    if(test_mode){
+      Serial.print("First hits: ");
+      print_position();
+    }
+
     move_axes(shift_max);
     long shift_forw[]= {shift_max[0]/2,shift_max[1]/2,shift_max[2]/2};
     move_axes(shift_forw);
@@ -309,6 +341,13 @@ void home_max(byte axes){
         while(!endstopTriggered(i,1)){
           stepMotor(i,1);
           delay(150);
+        }
+        if(test_mode){
+          Serial.print("Homed endstop ");
+          Serial.print(i);
+          Serial.print(":");
+          Serial.print(current_pos[i]);
+          Serial.println();
         }
         axis_max[i]=current_pos[i];
       }
@@ -363,9 +402,9 @@ int move_axes(long displ[n_motors]){
           //if we only have min, we go from 0 -> predefined axis_max
           //if we only have max, we go from 0 -> predefined axis_max
           //the predefined axis_max are the travel distances in steps
-          if(endstop_break<0) //min is always 0
+          if(!test_mode && endstop_break<0) //min is always 0
             current_pos[-endstop_break-1]=0;
-          else //max
+          else if(!test_mode) //max
             #if defined(ENDSTOPS_MIN) && defined(ENDSTOPS_MAX)
               axis_max[endstop_break-1]=current_pos[endstop_break-1];
             #elif defined(ENDSTOP_MAX) //we do not do this for ENDSTOPS_SOFT
@@ -744,8 +783,22 @@ void loop() {
       Serial.println("done");
       return;
     }
-
+    if(command.startsWith("test_mode")){
+      if(command.equals("test_mode on")){
+        test_mode=true;
+        Serial.println("test_mode on");
+      }else{
+        test_mode=false;
+        Serial.println("test_mode off");
+      }
+      return;
+    }
     #endif //ENDSTOPS
+
+    if(command.startsWith("version")){
+      Serial.println(F(VER_STRING));
+      return;
+    }
     if(command.startsWith("help")){
       Serial.println("");
       Serial.println(F(VER_STRING));
@@ -790,6 +843,8 @@ void loop() {
       Serial.println(F("max_p?                         - return positions of max endstops"));
       Serial.println(F("max <d> <d> <d>                - set maximum positions"));
       #endif
+      Serial.println(F("test_mode <s>                  - set test_mode <on> <off>"));
+      Serial.println(F("version                        - get firmware version string"));
       Serial.println("");
       Serial.println("Input Key:");
       Serial.println(F("<d>                            - a decimal integer."));
