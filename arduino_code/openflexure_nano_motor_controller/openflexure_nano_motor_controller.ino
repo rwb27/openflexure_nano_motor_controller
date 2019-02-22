@@ -817,8 +817,8 @@ void loop() {
       Serial.println("");
       Serial.println(F("Commands (terminated by a newline character):"));
       Serial.println(F("mrx <d>                        - relative move in x"));
-      Serial.println(F("mrx <d>                        - relative move in x"));
-      Serial.println(F("mrx <d>                        - relative move in x"));
+      Serial.println(F("mry <d>                        - relative move in y"));
+      Serial.println(F("mrz <d>                        - relative move in z"));
       Serial.println(F("mr <d> <d> <d>                 - relative move in all 3 axes"));
       Serial.println(F("release                        - de-energise all motors"));
       Serial.println(F("p?                             - print position (3 space-separated integers"));
