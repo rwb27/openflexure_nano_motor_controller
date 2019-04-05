@@ -95,21 +95,17 @@ class ExtensibleSerialInstrument(object):
         self.close()
 
     def __enter__(self):
-        """When we use this in a with statement, it should be opened already"""
-        self._position_on_enter = self.position
         return self
 
     def __exit__(self, type, value, traceback):
         """Close down the instrument.  This happens in __del__ though."""
-        if type is not None:
-            print("An exception occurred inside a with block, resetting ")
-            "position to its value at the start of the with block"
-            self.move_abs(self._position_on_enter)
+        pass
         
     def write(self,query_string):
         """Write a string to the serial port"""
         with self.communications_lock:
             assert self._ser.isOpen(), "Attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
+            #TODO: Check if this code is needed and if not kill it
 #            try:        
 #                if self._ser.outWaiting()>0: self._ser.flushOutput() #ensure there's nothing waiting
 #            except AttributeError:

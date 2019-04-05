@@ -65,7 +65,7 @@ dist/
 
 #Editor backups
 *.backup
-.kate-swp
+*.kate-swp
 
 # Sphinx documentation
 docs/_build/
