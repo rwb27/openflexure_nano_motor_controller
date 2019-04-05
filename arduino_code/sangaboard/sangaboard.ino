@@ -1,14 +1,18 @@
 /*
- * OpenFlexure Microscope motor controoler
- * Adapted from James Sharkey's Arduino-powered stepper driver
- * Substantially rewritten Richard Bowman, Spring 2017
- * Written by James Sharkey, Spring 2015
- * Based on code written by Richard Bowman, Autumn 2014
- * Based on code written by Fergus Riche, 2015
- * For use with the 3D printed microscope:
- * https://github.com/rwb27/openflexure_microscope/
- *
- * (c) Richard Bowman & James Sharkey, Released under GPL v3, 2017
+ * Sangaboard firmware
+ * 
+ * Most of the code is reused from the old openflexure_nano_motorcontroller firmware
+ * 
+ * This firmware was written by
+ * Richard Bowman
+ * Julian Stirling
+ * Boyko Vodenicharski
+ * Filip Ayazi
+ * 
+ * Much of the code is based on older code written by
+ * James Sharkey and Fergus Riche
+ * 
+ * Released under GPL v3, 2017
  */
 #include "StepperF_alt.h"   //Fergus's hacked stepper library
 #include <assert.h>
@@ -69,12 +73,14 @@
   #define SANGABOARDv3
 #elif ARDUINO_AVR_SANGABOARD
   #define SANGABOARDv3
+  #define BOARD_STRING "Sangaboard v0.3"
 #else
   #define SANGABOARDv2
+  #define BOARD_STRING "Sangaboard v0.2"
 #endif
 
 #define EACH_MOTOR for(int i=0; i<n_motors; i++)
-#define VER_STRING "OpenFlexure Motor Board v0.4"
+#define VER_STRING "Sangaboard Firmware v0.5"
 
 // The array below has 3 stepper objects, for X,Y,Z respectively
 const int n_motors = 3;
@@ -801,14 +807,19 @@ void loop() {
       Serial.println(F(VER_STRING));
       return;
     }
+    if(command.startsWith("board")){
+      Serial.println(F(BOARD_STRING));
+      return;
+    }
+
+    
     if(command.startsWith("help")){
       Serial.println("");
+      Serial.print("Board: ");
+      Serial.println(F(BOARD_STRING));
+      Serial.println("");
       Serial.println(F(VER_STRING));
-      #if defined(SANGABOARDv2)
-        Serial.println("Board: Sangaboard v0.2");
-      #elif defined(SANGABOARDv3)
-        Serial.println("Board: Sangaboard v0.3");
-      #endif
+      
       #if defined ADAFRUIT_TSL2591
       Serial.println(F("Compiled with Adafruit TSL2591 support"));
       #elif defined ADAFRUIT_ADS1115
@@ -820,6 +831,7 @@ void loop() {
       #ifdef ENDSTOPS_MAX
         Serial.println(F("Compiled with max endstops support"));
       #endif
+      
 
       Serial.println("");
       Serial.println(F("Commands (terminated by a newline character):"));

@@ -1,8 +1,10 @@
-# Ardunio code for openflexure motor controller
+# Ardunio code for the sangaboard
 
-## Arduino Hardware
-Tested with
-1. Arduino nano ATmega328p
+## Hardware
+This code can be used with a Sangaboard v0.3 either using the Arduino Leonardo bootloader or the Sangaboard custom bootloader.
+
+This code can be used with an Arduino nano ATmega328p plugged into a Sangaboard v0.2
+
 
 ## Arduino compiler version
 Requires version 1.6.2 or higher
