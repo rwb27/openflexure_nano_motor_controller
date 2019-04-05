@@ -67,6 +67,8 @@
 
 #ifdef ARDUINO_AVR_LEONARDO
   #define SANGABOARDv3
+#elif ARDUINO_AVR_SANGABOARD
+  #define SANGABOARDv3
 #else
   #define SANGABOARDv2
 #endif
@@ -802,6 +804,11 @@ void loop() {
     if(command.startsWith("help")){
       Serial.println("");
       Serial.println(F(VER_STRING));
+      #if defined(SANGABOARDv2)
+        Serial.println("Board: Sangaboard v0.2");
+      #elif defined(SANGABOARDv3)
+        Serial.println("Board: Sangaboard v0.3");
+      #endif
       #if defined ADAFRUIT_TSL2591
       Serial.println(F("Compiled with Adafruit TSL2591 support"));
       #elif defined ADAFRUIT_ADS1115
