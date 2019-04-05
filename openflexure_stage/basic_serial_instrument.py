@@ -133,25 +133,6 @@ class BasicSerialInstrument(object):
         if self._communications_lock is None:
             self._communications_lock = threading.RLock()
         return self._communications_lock
-
-#    def write(self,query_string):
-#        """Write a string to the unerlying communications port"""
-#        with self.communications_lock:
-#            raise NotImplementedError("Subclasses of MessageBusInstrument must override the write method!")
-            
-#    def flush_input_buffer(self):
-#        """Make sure there's nothing waiting to be read.
-#
-#        This function should be overridden to make sure nothing's lurking in
-#        the input buffer that could confuse a query.
-#        """
-#        with self.communications_lock:
-#            pass
-    
-#    def readline(self, timeout=None):
-#        """Read one line from the underlying bus.  Must be overriden."""
-#        with self.communications_lock:
-#            raise NotImplementedError("Subclasses of MessageBusInstrument must override the readline method!")
             
     def read_multiline(self, termination_line=None, timeout=None):
         """Read one line from the underlying bus.  Must be overriden.
@@ -193,6 +174,7 @@ class BasicSerialInstrument(object):
                 return self.read_multiline(termination_line)
             else:
                 return self.readline(timeout).strip() #question: should we strip the final newline?
+            
     def parsed_query(self, query_string, response_string=r"%d", re_flags=0, parse_function=None, **kwargs):
         """
         Perform a query, returning a parsed form of the response.
@@ -268,10 +250,6 @@ class BasicSerialInstrument(object):
         """Perform a query and return the result(s) as float(s) (see parsedQuery)"""
         return self.parsed_query(query_string, "%f", **kwargs)
 
-    #@staticmethod  # this was an attempt at making a property factory - now using a descriptor
-    #def queried_property(self, get_cmd, set_cmd, dtype='float', docstring=''):
-    #    get_func = self.float_query if dtype=='float' else self.query
-    #    return property(fget=partial(get_func, get_cmd), fset=self.write, docstring=docstring)
     def test_communications(self):
         """Check if the device is available on the current port.  
         
