@@ -10,13 +10,13 @@ It is (c) Richard Bowman 2017 and released under GNU GPL v3
 """
 from __future__ import print_function, division
 import time
-from .basic_serial_instrument import BasicSerialInstrument, OptionalModule, QueriedProperty, EIGHTBITS, PARITY_NONE, STOPBITS_ONE
+from .extensible_serial_instrument import ExtensibleSerialInstrument, OptionalModule, QueriedProperty, EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import numpy as np
 import sys
 import re
 import warnings
 
-class OpenFlexureStage(BasicSerialInstrument):
+class OpenFlexureStage(ExtensibleSerialInstrument):
     """Class managing serial communications with an Openflexure Motor Controller
 
     The `OpenFlexureStage` class handles setting up communications with the stage,
@@ -25,7 +25,7 @@ class OpenFlexureStage(BasicSerialInstrument):
     other tasks like conducting a linear scan.
 
     Arguments to the constructor are passed to the constructor of
-    :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
+    :class:`openflexure_stage.extensible_serial_instrument.ExtensibleSerialInstrument`,
     most likely the only one necessary is `port` which should be set to the serial port
     you will use to communicate with the motor controller.
 
@@ -36,7 +36,7 @@ class OpenFlexureStage(BasicSerialInstrument):
 
     In that case, the serial port will automatically be closed at the end of the block,
     even if an error occurs.  Otherwise, be sure to call the
-    :meth:`~.BasicSerialInstrument.close()` method to release the serial port.
+    :meth:`~.ExtensibleSerialInstrument.close()` method to release the serial port.
     """
     port_settings = {'baudrate':115200, 'bytesize':EIGHTBITS, 'parity':PARITY_NONE, 'stopbits':STOPBITS_ONE}
     """These are the settings for the stage's serial port, and can usually be left as default."""
@@ -66,7 +66,7 @@ class OpenFlexureStage(BasicSerialInstrument):
         """Create a stage object.
 
         Arguments are passed to the constructor of
-        :class:`openflexure_stage.basic_serial_instrument.BasicSerialInstrument`,
+        :class:`openflexure_stage.extensible_serial_instrument.ExtensibleSerialInstrument`,
         most likely the only one necessary is `port` which should be set to the serial port
         you will use to communicate with the motor controller.  That's the first argument so
         it doesn't need to be named.
@@ -275,9 +275,9 @@ class OpenFlexureStage(BasicSerialInstrument):
             raise value #propagate the exception
 
     def query(self, message, *args, **kwargs):
-        """Send a message and read the response.  See BasicSerialInstrument.query()"""
+        """Send a message and read the response.  See ExtensibleSerialInstrument.query()"""
         time.sleep(0.001) # This is to protect the stage from us talking too fast!
-        return BasicSerialInstrument.query(self, message, *args, **kwargs)
+        return ExtensibleSerialInstrument.query(self, message, *args, **kwargs)
 
     def list_modules(self):
         """Return a list of strings detailing optional modules.
@@ -423,43 +423,3 @@ class Endstops(OptionalModule):
             else:
                 self._parent.query('home_max {}'.format(ax))
 
-if __name__ == "__main__": #TODO: this should probably be binned!
-
-    assert len(sys.argv)<3, "Expecting at most one input argument, the port"
-    if len(sys.argv)==1:
-        port = 'COM3'
-    else:
-        port = sys.argv[1]
-    print(port)
-    s = OpenFlexureStage(port)
-    time.sleep(1)
-    #print(s.query("mrx 1000"))
-    #time.sleep(1)
-    #print(s.query("mrx -1000"))
-
-    #first, try a bunch of single-axis moves with and without acceleration
-    for rt in [-1, 500000]:
-        s.ramp_time = rt
-        for axis in ['x', 'y', 'z']:
-            for move in [-512, 512, 1024, -1024]:
-                print("moving {} by {}".format(axis, move))
-                qs = "mr{} {}".format(axis, move)
-                print(qs + ": " + s.query(str(qs)))
-                print("Position: {}".format(s.position))
-
-    time.sleep(0.5)
-    for i in range(10):
-        print(s.position)
-    #next, describe a circle with the X and Y motors.  This is a harder test!
-    radius = 1024;
-    #print("Setting ramp time: <"+s.query("ramp_time -1")+">") #disable acceleration
-    #print("Extra Line: <"+s.readline()+">")
-    s.ramp_time = -1
-    for a in np.linspace(0, 2*np.pi, 50):
-        print("moving to angle {}".format(a))
-        oldpos = np.array(s.position)
-        print("Position: {}".format(oldpos))
-        newpos = np.array([np.cos(a), np.sin(a), 0]) * radius
-        displacement = newpos - oldpos
-        s.move_rel(list(displacement))
-    s.close()

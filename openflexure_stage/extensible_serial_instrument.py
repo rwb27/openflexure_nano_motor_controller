@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-This module defines a chopped-out class from nplab_.
-It is a basic serial instrument class to simplify the process of interfacing with 
+This module has been modified from the chopped-out of class from nplab_.
+It is a serial instrument class to simplify the process of interfacing with 
 equipment that talks on a serial port.  The idea is that your instrument can
-subclass :class:`BasicSerialInstrument` and provide methods to control the
-hardware, which will mostly consist of `self.query()` commands.
+subclass :class:`ExtensibleSerialInstrument` and provide methods to control the
+hardware, which will mostly consist of `self.query()` commands. It also has
+options for adding OptionalModules so that you don't have to have multiple
+classes for lots of instruments with different configurations
 
 The :class:`QueriedProperty` class is a convenient shorthand to create a property
 that is read and/or set with a single serial query (i.e. a read followed by a write).
@@ -12,6 +14,7 @@ that is read and/or set with a single serial query (i.e. a read followed by a wr
 .. module_author: Richard Rowman (c) 2017, released under GNU GPL
 .. _nplab: http://www.github.com/nanophotonics/nplab
 """
+
 
 from __future__ import print_function, division
 import re
@@ -26,7 +29,7 @@ import io
 import time
 import warnings
 
-class BasicSerialInstrument(object):
+class ExtensibleSerialInstrument(object):
     """
     An instrument that communicates by sending strings back and forth over serial
 
@@ -285,7 +288,7 @@ class BasicSerialInstrument(object):
                 return None
     
 class OptionalModule(object):
-    """This allows a `BasicSerialInstrument` to have optional features.
+    """This allows a `ExtensibleSerialInstrument` to have optional features.
 
     OptionalModule is designed as a base class
     for interfacing with optional modules which may or may not be included with
@@ -323,11 +326,11 @@ class QueriedProperty(object):
     This returns a property-like (i.e. a descriptor) object.  You can use it
     in a class definition just like a property.  The property it creates will
     interact with the instrument over the communication bus to set and retrieve
-    its value.  It uses calls to `BasicSerialInstrument.parsed_query` to set or
+    its value.  It uses calls to `ExtensibleSerialInstrument.parsed_query` to set or
     get the value of the property.
     
-    `QueriedProperty` can be used to define properties on a `BasicSerialInstrument`
-    or an `OptionalModule` (in which case the `BasicSerialInstrument.parsed_query`
+    `QueriedProperty` can be used to define properties on a `ExtensibleSerialInstrument`
+    or an `OptionalModule` (in which case the `ExtensibleSerialInstrument.parsed_query`
     method of the parent object will be used).
     
     Arguments:
@@ -346,7 +349,7 @@ class QueriedProperty(object):
         the docstring
     :response_string:
         supply a % code (as you would for response_string in a
-        ``BasicSerialInstrument.parsed_query``)
+        ``ExtensibleSerialInstrument.parsed_query``)
     :ack_writes:
         set to "readline" to discard a line of input after writing.
     """
@@ -370,7 +373,7 @@ class QueriedProperty(object):
             obj=obj._parent
         if obj is None:
             return self
-        assert issubclass(type(obj),BasicSerialInstrument)
+        assert issubclass(type(obj),ExtensibleSerialInstrument)
         if self.get_cmd is None:
             raise AttributeError("unreadable attribute")
         # Allow certain "magic" values to set the response string
@@ -391,7 +394,7 @@ class QueriedProperty(object):
         if issubclass(type(obj),OptionalModule):
             obj.confirm_available()
             obj=obj._parent
-        assert issubclass(type(obj),BasicSerialInstrument)
+        assert issubclass(type(obj),ExtensibleSerialInstrument)
         if self.set_cmd is None:
             raise AttributeError("can't set attribute")
         if self.validate is not None:

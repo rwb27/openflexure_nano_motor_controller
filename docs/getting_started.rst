@@ -14,7 +14,7 @@ By default, it will use the first available serial port - if you are using a Ras
    
 The name of the serial port will depend on your operating system - Linux typically assigns names that look like ``/dev/ttyUSB0`` while Windows will often give it a name like ``COM4``.
 
-Make sure you close the stage after you're finished with it - the best way to do this is using a `with` block, but you can also call :meth:`~.BasicSerialInstrument.close` manually if required.
+Make sure you close the stage after you're finished with it - the best way to do this is using a `with` block, but you can also call :meth:`~.ExtensibleSerialInstrument.close` manually if required.
 
 Moving the stage
 -----------------
