@@ -1,4 +1,7 @@
-# OpenFlexure Motor Controller
+# This repository has moved!
+Please see https://gitlab.com/bath_open_instrumentation_group/sangaboard
+
+# OpenFlexure Motor Controller (Sangaboard v0.2)
 
 This aims to be a super-simple motor controller, based on an Arduino Nano and a couple of Darlington pair ICs.  It controls cheap 28BYJ-48 steppers, as used on the OpenFlexure microscope and stage.  It owes quite a bit to [Fergus Riche's motor board](https://github.com/fr293/motor_board), the hardware developed by [OpenScope](http://2015.igem.org/Team:Cambridge-JIC) and the Arduino-based motor controller used by a number of summer students working with Richard Bowman in Cambridge, particularly James Sharkey.  It is currently the motor board used by the [OpenFlexure Microscope](https://github.com/rwb27/openflexure_microscope/).
 
